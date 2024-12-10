@@ -10,6 +10,8 @@ type bit_binop =
   | Xor
   | And
   | Or
+  | Lt
+  | Le
 
 type 'a bit_term =
   | Const of int32
@@ -38,3 +40,7 @@ val t_xor : 'a bit_term -> 'a bit_term -> 'a bit_term
 val t_and : 'a bit_term -> 'a bit_term -> 'a bit_term
 
 val t_or : 'a bit_term -> 'a bit_term -> 'a bit_term
+
+val t_lt : 'a bit_term -> 'a bit_term -> 'a bit_term
+
+val t_le : 'a bit_term -> 'a bit_term -> 'a bit_term

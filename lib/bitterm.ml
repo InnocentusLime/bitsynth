@@ -12,8 +12,9 @@ type bit_binop =
   | Xor
   | And
   | Or
+  | Lt
+  | Le
 
-(* TODO: add > and < *)
 type 'a bit_term =
   | Const of int32
   | Var of 'a
@@ -32,12 +33,19 @@ let bit_unop_z3 ctx b =
   | RShift n -> fun x -> mk_lshr ctx (const_to_z3 ctx (Int.to_string n)) x
 
 let bit_binop_z3 ctx b =
+  let wrap_boolop op l r =
+    Z3.Boolean.mk_ite ctx (op l r)
+      (const_to_z3 ctx "0")
+      (const_to_z3 ctx "1")
+  in
   match b with
   | Plus -> mk_add ctx
   | Minus -> mk_sub ctx
   | Xor -> mk_xor ctx
   | And -> mk_and ctx
   | Or -> mk_or ctx
+  | Lt -> wrap_boolop (mk_slt ctx)
+  | Le -> wrap_boolop (mk_sle ctx)
 
 let z3_var ctx s =
   Z3.Expr.mk_const ctx
@@ -71,3 +79,7 @@ let t_xor l r = BinOp { op = Xor; l; r }
 let t_and l r = BinOp { op = And; l; r }
 
 let t_or l r = BinOp { op = Or; l; r }
+
+let t_lt l r = BinOp { op = Lt; l; r }
+
+let t_le l r = BinOp { op = Le; l; r }
