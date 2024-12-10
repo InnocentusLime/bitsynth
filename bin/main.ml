@@ -3,8 +3,8 @@ open Bitsynth
 let () =
   let cfg = [("model", "true"); ("proof", "false")] in
   let ctx = Z3.mk_context cfg in
-  let x = Z3.Expr.mk_const ctx (Z3.Symbol.mk_string ctx "x") (Z3.BitVector.mk_sort ctx 32) in
-  let y = Z3.Expr.mk_const ctx (Z3.Symbol.mk_string ctx "y") (Z3.BitVector.mk_sort ctx 32) in
+  let x = Bitterm.z3_var ctx "x" in
+  let y = Bitterm.z3_var ctx "y" in
   let t1 = Bitterm.t_and (Bitterm.Var x) (Bitterm.Var y)
   and t2 =
     Bitterm.t_not (

@@ -17,6 +17,8 @@ type 'a bit_term =
   | BinOp of { op:bit_binop; l: 'a bit_term; r: 'a bit_term }
   | UnOp of { op:bit_unop; x: 'a bit_term }
 
+val z3_var : Z3.context -> string -> Z3.Expr.expr
+
 val to_z3 : Z3.context -> Z3.Expr.expr bit_term -> Z3.Expr.expr
 
 val t_neg : 'a bit_term -> 'a bit_term

@@ -39,6 +39,11 @@ let bit_binop_z3 ctx b =
   | And -> mk_and ctx
   | Or -> mk_or ctx
 
+let z3_var ctx s =
+  Z3.Expr.mk_const ctx
+    (Z3.Symbol.mk_string ctx s)
+    (Z3.BitVector.mk_sort ctx bits_size)
+
 let to_z3 ctx t =
   let rec go t =
     match t with
