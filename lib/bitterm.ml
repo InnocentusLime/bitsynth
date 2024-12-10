@@ -48,3 +48,21 @@ let to_z3 ctx t =
     | UnOp { op; x } -> bit_unop_z3 ctx op (go x)
   in
   go t
+
+let t_neg x = UnOp { op = Neg; x }
+
+let t_not x = UnOp { op = Not; x }
+
+let t_shl n x = UnOp { op = LShift n; x }
+
+let t_shr n x = UnOp { op = RShift n; x }
+
+let t_plus l r = BinOp { op = Plus; l; r }
+
+let t_minus l r = BinOp { op = Minus; l; r }
+
+let t_xor l r = BinOp { op = Xor; l; r }
+
+let t_and l r = BinOp { op = And; l; r }
+
+let t_or l r = BinOp { op = Or; l; r }
