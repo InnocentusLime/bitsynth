@@ -1,0 +1,8 @@
+(executable
+ (public_name bitsynth)
+ (name main)
+ (libraries bitsynth))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))

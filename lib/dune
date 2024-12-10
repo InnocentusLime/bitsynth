@@ -1,0 +1,7 @@
+(library
+ (name bitsynth)
+ (libraries z3))
+
+(env
+  (dev
+    (flags (:standard -warn-error -A))))
