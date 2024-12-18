@@ -12,6 +12,8 @@ jobs:
       run:
         shell: bash
     steps:
+    - run: |
+        echo "/home/opam/.opam/5.1/bin" >> $GITHUB_PATH
      - name: Checkout code
        uses: actions/checkout@v4
      - name: Build
