@@ -7,7 +7,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-20.04
-    container: innocentuslime/bitsynth-ci:ubuntu-v2
+    container: innocentuslime/bitsynth-ci:ubuntu-v3
     defaults:
       run:
         shell: bash
