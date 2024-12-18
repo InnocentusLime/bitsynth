@@ -7,7 +7,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container: innocentuslime/bitsynth-ci
+    container: innocentuslime/bitsynth-ci:ubuntu-v1
     steps:
      - name: Checkout code
        uses: actions/checkout@v4
