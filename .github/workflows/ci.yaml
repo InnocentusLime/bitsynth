@@ -7,14 +7,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    container: 
-      image: innocentuslime/bitsynth-ci:ubuntu-v1
-      options: --user root
+    container: innocentuslime/bitsynth-ci:ubuntu-v2
     steps:
-     - name: Init opam
-       run: opam init
-     - name: Setup opam env
-       run: eval $(opam env)
      - name: Checkout code
        uses: actions/checkout@v4
      - name: Build
