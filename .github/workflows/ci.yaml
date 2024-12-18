@@ -8,9 +8,10 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     container: innocentuslime/bitsynth-ci:ubuntu-v2
+    defaults:
+      run:
+        shell: bash
     steps:
-     - name: Init env
-       run: opam init && eval $(opam env)
      - name: Checkout code
        uses: actions/checkout@v4
      - name: Build
