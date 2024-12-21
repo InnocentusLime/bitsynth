@@ -8,14 +8,6 @@ jobs:
  build-and-test:
    runs-on: ubuntu-20.04
    steps:
-    - name: Setup env
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: 1.81.0
-        override: true
-        target: x86_64-unknown-linux-gnu
-        components: rustfmt
     - name: Install Z3
       run: sudo apt-get update --fix-missing; sudo apt-get install --no-install-recommends libz3-4
     - name: Checkout code
@@ -32,6 +24,7 @@ jobs:
           target/
         key: check-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: check-${{ runner.os }}-cargo-
+    - uses: dtolnay/rust-toolchain@1.81.0
     - name: Build
       run: cargo build
     - name: Test
