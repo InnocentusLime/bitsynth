@@ -1,5 +1,10 @@
 mod synth;
 
+#[test]
+fn silly() {
+    test_optimize_assert_soft_and_get_objectives();
+}
+
 fn main() {
     println!("Hello, world!");
     test_optimize_assert_soft_and_get_objectives();
