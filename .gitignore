@@ -1,2 +1,6 @@
 z3.log
 _build/
+
+# Added by cargo
+
+/target
