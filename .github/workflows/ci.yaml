@@ -18,6 +18,8 @@ jobs:
         components: rustfmt
     - name: Install Z3
       run: sudo apt-get update --fix-missing; sudo apt-get install --no-install-recommends libz3-4
+    - name: Checkout code
+      uses: actions/checkout@v4
     - name: Set up cargo cache
       uses: actions/cache@v3
       continue-on-error: false
@@ -30,8 +32,6 @@ jobs:
           target/
         key: check-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: check-${{ runner.os }}-cargo-
-    - name: Checkout code
-      uses: actions/checkout@v4
     - name: Build
       run: cargo build
     - name: Test
