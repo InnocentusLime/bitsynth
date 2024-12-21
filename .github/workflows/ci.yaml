@@ -1,22 +1,26 @@
-#name: CI
-#on:
-#  push:
-#    branches:
-#      - 'main'
+name: CI
+on:
+ push:
+   branches:
+     - 'main'
 
-#jobs:
-#  build-and-test:
-#    runs-on: ubuntu-20.04
-#    container: innocentuslime/bitsynth-ci:ubuntu-v6
-#    defaults:
-#      run:
-#        shell: bash
-#    steps:
-#     - name: Setup env
-#       run: echo "/home/opam/.opam/5.1/bin" >> $GITHUB_PATH
-#     - name: Checkout code
-#       uses: actions/checkout@v4
-#     - name: Build
-#       run: dune build
-#     - name: Test
-#       run: dune test
+jobs:
+ build-and-test:
+   runs-on: ubuntu-20.04
+   steps:
+    - name: Setup env
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: 1.81.0
+        override: true
+        target: x86_64-unknown-linux-gnu
+        components: rustfmt
+    - name: Install Z3
+      run: sudo apt-get update --fix-missing; sudo apt-get install --no-install-recommends libz3-4
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Build
+      run: cargo build
+    - name: Test
+      run: cargo test
