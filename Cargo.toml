@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 z3 = "0.12.1"
 log = "0.4.22"
+bitvec = "1"

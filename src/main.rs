@@ -1,4 +1,4 @@
-mod synth;
+mod expr;
 
 #[test]
 fn silly() {
