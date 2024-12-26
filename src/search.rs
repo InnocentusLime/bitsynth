@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use z3::ast::Ast;
+
 use crate::{expr::{Expr, Variable, BITS_PER_VAL}, synth::Synthesizer};
 
 pub struct BithackSearch<'ctx, S> {
@@ -62,7 +64,46 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         self.constraints.push(constraint);
     }
 
-    fn expr_to_z3(&mut self, expr: &Expr) -> z3::ast::BV<'_> {
+    fn next_cand(&mut self) -> Option<(Expr, bool)> {
+        let cand = self.synth.next_expr()?;
+
+        let z3_cand = self.expr_to_z3(&cand);
+        let specif = self.candidate_specif(z3_cand);
+
+        self.solver.assert(&specif);
+
+        let is_good = match self.solver.check() {
+            z3::SatResult::Unsat | z3::SatResult::Unknown => false,
+            z3::SatResult::Sat => true,
+        };
+
+        Some((cand, is_good))
+    }
+
+    fn candidate_specif(&mut self, cand: z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
+        let cand_constr = self.cand_constraint(cand);
+
+        z3::ast::forall_const(
+            &self.z3,
+            &self.z3_args.iter()
+                .map(|x| x as &dyn z3::ast::Ast)
+                .collect::<Vec<_>>()
+            ,
+            &[],
+            &cand_constr,
+        )
+    }
+
+    fn cand_constraint(&mut self, cand: z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
+        let candeq = cand._eq(self.get_result_var());
+
+        self.constraints.iter()
+            .fold(candeq, |acc, constraint| {
+                acc & constraint
+            })
+    }
+
+    fn expr_to_z3(&mut self, expr: &Expr) -> z3::ast::BV<'ctx> {
         let args = &self.z3_args;
         let consts = &mut self.z3_consts;
         let mut next_const_idx = 0;
