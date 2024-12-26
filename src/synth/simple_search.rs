@@ -1,25 +1,54 @@
-use crate::expr::Expr;
+use crate::expr::{Expr, Variable};
 
 use super::Synthesizer;
 
 
 /// This synthesizer simply tries a few
-/// common examples.
+/// common examples. Works only for single-var
+/// functions.
 pub struct SimpleSearch {
+    arg_cnt: usize,
     db: Vec<Expr>,
     last_tried: usize,
 }
 
+impl SimpleSearch {
+    pub fn new() -> Self {
+        SimpleSearch {
+            arg_cnt: 0,
+            last_tried: 0,
+            db: vec![
+                Expr::Variable(Variable::Const),
+                Expr::Variable(Variable::Argument(0)),
+                Expr::Binop(crate::expr::BinopKind::And, Box::new((
+                    Expr::Variable(Variable::Argument(0)),
+                    Expr::Variable(Variable::Const)
+                )))
+            ],
+         }
+    }
+}
+
 impl Synthesizer for SimpleSearch {
     fn known_args(&mut self, vars: usize) {
-        todo!()
+        self.arg_cnt = vars;
     }
 
-    fn learn(&mut self, example: super::Example) {
-        todo!()
+    fn learn(&mut self, _example: super::Example) {
+        /* We do not learn. */
     }
 
     fn next_expr(&mut self) -> Option<Expr> {
-        todo!()
+        if self.arg_cnt < 1 {
+            return None;
+        }
+
+        match self.db.get(self.last_tried) {
+            None => None,
+            Some(x) => {
+                self.last_tried += 1;
+                Some(x.clone())
+            },
+        }
     }
 }

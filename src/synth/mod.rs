@@ -1,4 +1,4 @@
-mod simple_search;
+pub mod simple_search;
 
 use std::collections::HashMap;
 
@@ -17,6 +17,8 @@ pub trait Synthesizer {
     /// Supply the argument names to the synthesizer. The synthesizer
     /// cannot introduce new arguments to a formula, so it is required
     /// to use what it has.
+    ///
+    /// For simplicity, the variables are contigiously enumerated.
     fn known_args(&mut self, var_count: usize);
 
     /// Asks the synthesizer to take a new example into account. This is

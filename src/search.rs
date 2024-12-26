@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use log::trace;
 use z3::ast::Ast;
 
 use crate::{expr::{Expr, Variable, BITS_PER_VAL}, synth::Synthesizer};
@@ -78,12 +79,16 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     fn next_cand(&mut self) -> Option<(Expr, bool)> {
         let cand = self.synth.next_expr()?;
 
+        trace!("Try: {cand:?}");
+
         let z3_cand = self.expr_to_z3(&cand);
         let specif = self.candidate_specif(z3_cand);
 
         self.solver.assert(&specif);
 
-        let is_good = match self.solver.check() {
+        let z3_verdict = self.solver.check();
+        trace!("Z3 verdict: {z3_verdict:?}");
+        let is_good = match z3_verdict {
             z3::SatResult::Unsat | z3::SatResult::Unknown => false,
             z3::SatResult::Sat => true,
         };
