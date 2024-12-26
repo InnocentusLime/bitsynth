@@ -19,7 +19,7 @@ pub struct BithackSearch<'ctx, S> {
 impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     pub fn new(
         z3: &'ctx z3::Context,
-        synth: S,
+        mut synth: S,
         arguments: Vec<String>,
     ) -> Self {
         let arguments =
@@ -30,6 +30,8 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         let z3_args = (0..arguments.len())
             .map(|idx| Self::new_z3_arg(z3, idx))
             .collect();
+
+        synth.known_args(arguments.len());
 
         Self {
             solver: z3::Solver::new(z3),
