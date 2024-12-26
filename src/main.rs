@@ -8,8 +8,8 @@ mod synth;
 mod search;
 
 fn main() {
-    let logger = colog::default_builder()
-        .filter_level(log::LevelFilter::Debug)
+    colog::default_builder()
+        // .filter_level(log::LevelFilter::Debug)
         .init();
 
     info!("Started");
