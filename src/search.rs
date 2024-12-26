@@ -64,6 +64,17 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         self.constraints.push(constraint);
     }
 
+    pub fn step(&mut self) -> Option<(Expr, bool)> {
+        self.solver.push();
+
+        let cand = self.next_cand();
+        // TODO: learn from the counterexample
+
+        self.solver.pop(1);
+
+        cand
+    }
+
     fn next_cand(&mut self) -> Option<(Expr, bool)> {
         let cand = self.synth.next_expr()?;
 
