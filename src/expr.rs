@@ -121,7 +121,7 @@ impl Expr {
         )
     }
 
-    pub fn to_z3_impl<'ctx, V>(
+    pub fn to_z3<'ctx, V>(
         &self,
         ctx: &'ctx z3::Context,
         mut var_map: V,

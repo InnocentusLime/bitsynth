@@ -9,8 +9,8 @@ pub struct BithackSearch<'ctx, S> {
     constraints: Vec<z3::ast::Bool<'ctx>>,
     result_var: z3::ast::BV<'ctx>,
     arguments: HashMap<String, usize>,
-    // z3_args: Vec<z3::ast::BV<'ctx>>,
-    // z3_consts: Vec<z3::ast::BV<'ctx>>,
+    z3_consts: Vec<z3::ast::BV<'ctx>>,
+    z3_args: Vec<z3::ast::BV<'ctx>>,
 }
 
 impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
@@ -24,12 +24,9 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
                 .enumerate()
                 .map(|(x, y)| (y, x))
                 .collect::<HashMap<_, _>>();
-        // let var_cache =
-        //     arguments.values()
-        //         .map(|x| *x)
-        //         .map(Variable::Argument)
-        //         .map(|x| (x, x.to_z3(z3)))
-        //         .collect::<HashMap<_, _>>();
+        let z3_args = (0..arguments.len())
+            .map(|idx| Self::new_z3_arg(z3, idx))
+            .collect();
 
         Self {
             solver: z3::Solver::new(z3),
@@ -42,6 +39,8 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
                 BITS_PER_VAL,
             ),
             arguments,
+            z3_consts: Vec::new(),
+            z3_args,
         }
     }
 
@@ -52,15 +51,57 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     pub fn get_argument(&self, x: &str) -> Option<&z3::ast::BV<'ctx>> {
         let id = self.arguments.get(x)?;
 
-        // NOTE: yes, this may panic, but var_cache not having an entry
+        // NOTE: yes, this may panic, but z3_args not having an entry
         // at this point would be a bug.
-        // Some(&self.var_cache[&Variable::Argument(*id)])
-        todo!()
+        Some(&self.z3_args[*id])
     }
 
     /// Adds a new constraint to the searched expression. The constraint
     /// should involve the argument variables and the result variable.
     pub fn add_constraint(&mut self, constraint: z3::ast::Bool<'ctx>) {
         self.constraints.push(constraint);
+    }
+
+    fn expr_to_z3(&mut self, expr: &Expr) -> z3::ast::BV<'_> {
+        let args = &self.z3_args;
+        let consts = &mut self.z3_consts;
+        let mut next_const_idx = 0;
+
+        expr.to_z3(
+            &self.z3,
+            |ctx, v| match v {
+                Variable::Argument(idx) => args[idx].clone(),
+                Variable::Const => {
+                    let res = match consts.get(next_const_idx) {
+                        Some(x) => x.clone(),
+                        None => {
+                            let c = Self::new_z3_const(ctx, next_const_idx);
+                            consts.push(c.clone());
+                            c
+                        },
+                    };
+
+                    next_const_idx += 1;
+
+                    res
+                },
+            },
+        )
+    }
+
+    fn new_z3_const(ctx: &z3::Context, idx: usize) -> z3::ast::BV<'_> {
+        z3::ast::BV::new_const(
+            ctx,
+            format!("c{idx:}"),
+            BITS_PER_VAL,
+        )
+    }
+
+    fn new_z3_arg(ctx: &z3::Context, idx: usize) -> z3::ast::BV<'_> {
+        z3::ast::BV::new_const(
+            ctx,
+            format!("arg{idx:}"),
+            BITS_PER_VAL,
+        )
     }
 }
