@@ -9,7 +9,7 @@ mod search;
 
 fn main() {
     colog::default_builder()
-        // .filter_level(log::LevelFilter::Debug)
+        .filter_level(log::LevelFilter::Debug)
         .init();
 
     info!("Started");
@@ -23,11 +23,16 @@ fn main() {
         vec!["x".to_string()],
     );
 
-    // let x_var = search.get_argument("x").unwrap();
+    let x_var = search.get_argument("x").unwrap();
     let r_var = search.get_result_var();
+    // search.add_constraint(
+    //     r_var._eq(
+    //         &z3::ast::BV::from_i64(&ctx, 0, 32)
+    //     )
+    // );
     search.add_constraint(
         r_var._eq(
-            &z3::ast::BV::from_i64(&ctx, 0, 32)
+           &(x_var & 0x2i64)
         )
     );
 
