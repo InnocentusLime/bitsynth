@@ -105,7 +105,7 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     }
 
     fn counter_specif(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
-        let cand_constr = !self.cand_constraint(cand);
+        let cand_constr = self.counter_constraint(cand);
 
         z3::ast::forall_const(
             &self.z3,
@@ -132,6 +132,15 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
             &[],
             &cand_constr,
         )
+    }
+
+    fn counter_constraint(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
+        let candeq = cand._eq(self.get_result_var());
+        let specif = z3::ast::Bool::and(&self.z3,
+            self.constraints.iter().collect::<Vec<_>>().as_slice()
+        );
+
+        candeq.implies(&!specif)
     }
 
     fn cand_constraint(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
