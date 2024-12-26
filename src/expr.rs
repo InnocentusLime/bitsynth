@@ -132,20 +132,20 @@ impl Expr {
         self.walk_expr(
             move |v| var_map(ctx, v),
             |unop_kind, e| match unop_kind {
-                UnopKind::Not => e.bvnot(),
-                UnopKind::Negate => e.bvneg(),
+                UnopKind::Not => !e,
+                UnopKind::Negate => -e,
             },
             |is_left, n, e| if is_left {
-                e.bvshl(&n)
+                e << n
             } else {
                 e.bvashr(&n)
             },
             |binop_kind, l, r| match binop_kind {
-                BinopKind::And => l.bvand(&r),
-                BinopKind::Or => l.bvor(&r),
-                BinopKind::Xor => l.bvxor(&r),
-                BinopKind::Plus => l.bvadd(&r),
-                BinopKind::Minus => l.bvsub(&r),
+                BinopKind::And => l & r,
+                BinopKind::Or => l | r,
+                BinopKind::Xor => l ^ r,
+                BinopKind::Plus => l + r,
+                BinopKind::Minus => l - r,
             },
         )
     }
