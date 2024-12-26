@@ -9,7 +9,8 @@ pub struct BithackSearch<'ctx, S> {
     constraints: Vec<z3::ast::Bool<'ctx>>,
     result_var: z3::ast::BV<'ctx>,
     arguments: HashMap<String, usize>,
-    var_cache: HashMap<Variable, z3::ast::BV<'ctx>>
+    // z3_args: Vec<z3::ast::BV<'ctx>>,
+    // z3_consts: Vec<z3::ast::BV<'ctx>>,
 }
 
 impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
@@ -23,12 +24,12 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
                 .enumerate()
                 .map(|(x, y)| (y, x))
                 .collect::<HashMap<_, _>>();
-        let var_cache =
-            arguments.values()
-                .map(|x| *x)
-                .map(Variable::Argument)
-                .map(|x| (x, x.to_z3(z3)))
-                .collect::<HashMap<_, _>>();
+        // let var_cache =
+        //     arguments.values()
+        //         .map(|x| *x)
+        //         .map(Variable::Argument)
+        //         .map(|x| (x, x.to_z3(z3)))
+        //         .collect::<HashMap<_, _>>();
 
         Self {
             solver: z3::Solver::new(z3),
@@ -40,7 +41,6 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
                 "result",
                 BITS_PER_VAL,
             ),
-            var_cache,
             arguments,
         }
     }
@@ -54,7 +54,8 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
 
         // NOTE: yes, this may panic, but var_cache not having an entry
         // at this point would be a bug.
-        Some(&self.var_cache[&Variable::Argument(*id)])
+        // Some(&self.var_cache[&Variable::Argument(*id)])
+        todo!()
     }
 
     /// Adds a new constraint to the searched expression. The constraint

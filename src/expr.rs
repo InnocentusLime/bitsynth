@@ -1,39 +1,16 @@
-use std::collections::{HashMap};
-
-use bitvec::BitArr;
-
 pub const BITS_PER_VAL: u32 = 32;
 pub type ExprVal = i32;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Variable {
-    Const(usize),
+    Const,
     Argument(usize),
-}
-
-impl Variable {
-    pub fn to_z3<'ctx>(&self, ctx: &'ctx z3::Context) -> z3::ast::BV<'ctx> {
-        match self {
-            Variable::Const(c) => z3::ast::BV::new_const(
-                ctx,
-                format!("c{c:}"),
-                BITS_PER_VAL,
-            ),
-            Variable::Argument(x) => z3::ast::BV::new_const(
-                ctx,
-                format!("arg{x:}"),
-                BITS_PER_VAL,
-            ),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnopKind {
     Not,
     Negate,
-    Shl(Variable),
-    Shr(Variable),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -49,75 +26,127 @@ pub enum BinopKind {
 pub enum Expr {
     Variable(Variable),
     Unop(UnopKind, Box<Expr>),
+    Shift {
+        is_left: bool,
+        n: Variable,
+        expr: Box<Expr>,
+    },
     Binop(BinopKind, Box<(Expr, Expr)>),
 }
 
 impl Expr {
-    pub fn compute<F>(
+    // NOTE: if stack starts overfilling -- that should be the first
+    // function we turn non-recursive.
+    pub fn walk_expr<T, V, U, S, B>(
         &self,
-        mut f: F,
-    ) -> ExprVal
+        mut var_action: V,
+        mut unop_action: U,
+        mut shift_action: S,
+        mut binop_action: B,
+    ) -> T
     where
-        F: FnMut(Variable) -> ExprVal,
+        V: FnMut(Variable) -> T,
+        U: FnMut(UnopKind, T) -> T,
+        S: FnMut(bool, T, T) -> T,
+        B: FnMut(BinopKind, T, T) -> T,
     {
         match self {
-            Expr::Variable(v) => f(*v),
-            Expr::Unop(unop_kind, e) => {
-                let e = e.compute(&mut f);
-                match unop_kind {
-                    UnopKind::Not => !e,
-                    UnopKind::Negate => -e,
-                    UnopKind::Shl(n) => e << f(*n),
-                    UnopKind::Shr(n) => e >> f(*n),
-                }
+            Expr::Variable(variable) => var_action(*variable),
+            Expr::Unop(unop_kind, expr) => {
+                let expr = expr.walk_expr(
+                    &mut var_action,
+                    &mut unop_action,
+                    &mut shift_action,
+                    &mut binop_action,
+                );
+
+                unop_action(*unop_kind, expr)
+            },
+            Expr::Shift { is_left, n, expr } => {
+                let expr = expr.walk_expr(
+                    &mut var_action,
+                    &mut unop_action,
+                    &mut shift_action,
+                    &mut binop_action,
+                );
+                let n = var_action(*n);
+
+                shift_action(*is_left, expr, n)
             },
             Expr::Binop(binop_kind, lr) => {
-                let (l, r) = (lr.0.compute(&mut f), lr.1.compute(&mut f));
-                match binop_kind {
-                    BinopKind::And => l & r,
-                    BinopKind::Or => l | r,
-                    BinopKind::Xor => l ^ r,
-                    BinopKind::Plus => l + r,
-                    BinopKind::Minus => l - r,
-                }
+                let l = lr.0.walk_expr(
+                    &mut var_action,
+                    &mut unop_action,
+                    &mut shift_action,
+                    &mut binop_action
+                );
+
+                let r = lr.0.walk_expr(
+                    &mut var_action,
+                    &mut unop_action,
+                    &mut shift_action,
+                    &mut binop_action
+                );
+
+                binop_action(*binop_kind, l, r)
             },
         }
     }
 
-    pub fn to_z3<'ctx>(
+    pub fn compute<F>(
+        &self,
+        mut var_map: F,
+    ) -> ExprVal
+    where
+        F: FnMut(Variable) -> ExprVal,
+    {
+        self.walk_expr(
+            &mut var_map,
+            |unop_kind, e| match unop_kind {
+                UnopKind::Not => -e,
+                UnopKind::Negate => !e,
+            },
+            |is_left, n, e| if is_left {
+                e << n
+            } else {
+                e >> n
+            },
+            |binop_kind, l, r| match binop_kind {
+                BinopKind::And => l & r,
+                BinopKind::Or => l | r,
+                BinopKind::Xor => l ^ r,
+                BinopKind::Plus => l + r,
+                BinopKind::Minus => l - r,
+            },
+        )
+    }
+
+    pub fn to_z3_impl<'ctx, V>(
         &self,
         ctx: &'ctx z3::Context,
-        vars: &mut HashMap<Variable, z3::ast::BV<'ctx>>
-    ) -> z3::ast::BV<'ctx> {
-        let get_var = |vars: &mut HashMap<_, _>, v: &Variable| {
-            vars.entry(*v)
-                .or_insert_with(|| {
-                    v.to_z3(ctx)
-                })
-                .clone()
-        };
-
-        match self {
-            Expr::Variable(v) => get_var(vars, v),
-            Expr::Unop(unop_kind, e) => {
-                let e = e.to_z3(ctx, vars);
-                match unop_kind {
-                    UnopKind::Not => e.bvnot(),
-                    UnopKind::Negate => e.bvneg(),
-                    UnopKind::Shl(n) => e.bvshl(&get_var(vars, n)),
-                    UnopKind::Shr(n) => e.bvashr(&get_var(vars, n)),
-                }
+        mut var_map: V,
+    ) -> z3::ast::BV<'ctx>
+    where
+        V: FnMut(&'ctx z3::Context, Variable) -> z3::ast::BV<'ctx>,
+    {
+        self.walk_expr(
+            move |v| var_map(ctx, v),
+            |unop_kind, e| match unop_kind {
+                UnopKind::Not => e.bvnot(),
+                UnopKind::Negate => e.bvneg(),
             },
-            Expr::Binop(binop_kind, lr) => {
-                let (l, r) = (lr.0.to_z3(ctx, vars), lr.1.to_z3(ctx, vars));
-                match binop_kind {
-                    BinopKind::And => l.bvand(&r),
-                    BinopKind::Or => l.bvor(&r),
-                    BinopKind::Xor => l.bvxor(&r),
-                    BinopKind::Plus => l.bvadd(&r),
-                    BinopKind::Minus => l.bvsub(&r),
-                }
+            |is_left, n, e| if is_left {
+                e.bvshl(&n)
+            } else {
+                e.bvashr(&n)
             },
-        }
+            |binop_kind, l, r| match binop_kind {
+                BinopKind::And => l.bvand(&r),
+                BinopKind::Or => l.bvor(&r),
+                BinopKind::Xor => l.bvxor(&r),
+                BinopKind::Plus => l.bvadd(&r),
+                BinopKind::Minus => l.bvsub(&r),
+            },
+        )
     }
 }
