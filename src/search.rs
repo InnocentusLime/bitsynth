@@ -68,26 +68,32 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     }
 
     pub fn step(&mut self) -> Option<(Expr, bool)> {
-        self.solver.push();
-
-        let cand = self.next_cand();
-        // TODO: learn from the counterexample
-
-        self.solver.pop(1);
-
-        cand
-    }
-
-    fn next_cand(&mut self) -> Option<(Expr, bool)> {
         let cand = self.synth.next_expr()?;
+        let z3_cand = self.expr_to_z3(&cand);
 
         info!("Try: {cand:?}");
 
-        let z3_cand = self.expr_to_z3(&cand);
-        let specif = self.candidate_specif(z3_cand);
+        self.solver.push();
+        let is_good = self.next_cand(&z3_cand);
+        self.solver.pop(1);
 
+        if !is_good {
+            info!("Looking for universal counter example");
+            let specif = self.counter_specif(&z3_cand);
+
+            self.solver.push();
+            self.solver.assert(&specif);
+            let z3_verdict = self.solver.check();
+            info!("Z3 counterexample search: {z3_verdict:?}");
+            self.solver.pop(1);
+        }
+
+        Some((cand, is_good))
+    }
+
+    fn next_cand(&mut self, cand: &z3::ast::BV<'ctx>) -> bool {
+        let specif = self.candidate_specif(cand);
         self.solver.assert(&specif);
-
         let z3_verdict = self.solver.check();
         info!("Z3 verdict: {z3_verdict:?}");
         let is_good = match z3_verdict {
@@ -95,10 +101,24 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
             z3::SatResult::Sat => true,
         };
 
-        Some((cand, is_good))
+        is_good
     }
 
-    fn candidate_specif(&mut self, cand: z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
+    fn counter_specif(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
+        let cand_constr = !self.cand_constraint(cand);
+
+        z3::ast::forall_const(
+            &self.z3,
+            &self.z3_consts.iter()
+                .map(|x| x as &dyn z3::ast::Ast)
+                .collect::<Vec<_>>()
+            ,
+            &[],
+            &cand_constr,
+        )
+    }
+
+    fn candidate_specif(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
         let cand_constr = self.cand_constraint(cand);
 
         z3::ast::forall_const(
@@ -112,7 +132,7 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         )
     }
 
-    fn cand_constraint(&mut self, cand: z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
+    fn cand_constraint(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
         let candeq = cand._eq(self.get_result_var());
 
         self.constraints.iter()
