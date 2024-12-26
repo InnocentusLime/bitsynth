@@ -39,10 +39,10 @@ impl Expr {
     // function we turn non-recursive.
     pub fn walk_expr<T, V, U, S, B>(
         &self,
-        mut var_action: V,
-        mut unop_action: U,
-        mut shift_action: S,
-        mut binop_action: B,
+        var_action: &mut V,
+        unop_action: &mut U,
+        shift_action: &mut S,
+        binop_action: &mut B,
     ) -> T
     where
         V: FnMut(Variable) -> T,
@@ -54,20 +54,20 @@ impl Expr {
             Expr::Variable(variable) => var_action(*variable),
             Expr::Unop(unop_kind, expr) => {
                 let expr = expr.walk_expr(
-                    &mut var_action,
-                    &mut unop_action,
-                    &mut shift_action,
-                    &mut binop_action,
+                    var_action,
+                    unop_action,
+                    shift_action,
+                    binop_action,
                 );
 
                 unop_action(*unop_kind, expr)
             },
             Expr::Shift { is_left, n, expr } => {
                 let expr = expr.walk_expr(
-                    &mut var_action,
-                    &mut unop_action,
-                    &mut shift_action,
-                    &mut binop_action,
+                    var_action,
+                    unop_action,
+                    shift_action,
+                    binop_action,
                 );
                 let n = var_action(*n);
 
@@ -75,17 +75,17 @@ impl Expr {
             },
             Expr::Binop(binop_kind, lr) => {
                 let l = lr.0.walk_expr(
-                    &mut var_action,
-                    &mut unop_action,
-                    &mut shift_action,
-                    &mut binop_action
+                    var_action,
+                    unop_action,
+                    shift_action,
+                    binop_action
                 );
 
                 let r = lr.0.walk_expr(
-                    &mut var_action,
-                    &mut unop_action,
-                    &mut shift_action,
-                    &mut binop_action
+                    var_action,
+                    unop_action,
+                    shift_action,
+                    binop_action
                 );
 
                 binop_action(*binop_kind, l, r)
@@ -102,16 +102,16 @@ impl Expr {
     {
         self.walk_expr(
             &mut var_map,
-            |unop_kind, e| match unop_kind {
+            &mut |unop_kind, e| match unop_kind {
                 UnopKind::Not => -e,
                 UnopKind::Negate => !e,
             },
-            |is_left, n, e| if is_left {
+            &mut |is_left, n, e| if is_left {
                 e << n
             } else {
                 e >> n
             },
-            |binop_kind, l, r| match binop_kind {
+            &mut |binop_kind, l, r| match binop_kind {
                 BinopKind::And => l & r,
                 BinopKind::Or => l | r,
                 BinopKind::Xor => l ^ r,
@@ -130,17 +130,17 @@ impl Expr {
         V: FnMut(&'ctx z3::Context, Variable) -> z3::ast::BV<'ctx>,
     {
         self.walk_expr(
-            move |v| var_map(ctx, v),
-            |unop_kind, e| match unop_kind {
+            &mut move |v| var_map(ctx, v),
+            &mut |unop_kind, e| match unop_kind {
                 UnopKind::Not => !e,
                 UnopKind::Negate => -e,
             },
-            |is_left, n, e| if is_left {
+            &mut |is_left, n, e| if is_left {
                 e << n
             } else {
                 e.bvashr(&n)
             },
-            |binop_kind, l, r| match binop_kind {
+            &mut |binop_kind, l, r| match binop_kind {
                 BinopKind::And => l & r,
                 BinopKind::Or => l | r,
                 BinopKind::Xor => l ^ r,
