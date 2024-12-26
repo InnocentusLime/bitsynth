@@ -74,7 +74,14 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         info!("Try: {cand:?}");
 
         self.solver.push();
-        let is_good = self.next_cand(&z3_cand);
+        let specif = self.candidate_specif(&z3_cand);
+        self.solver.assert(&specif);
+        let z3_verdict = self.solver.check();
+        info!("Z3 verdict: {z3_verdict:?}");
+        let is_good = match z3_verdict {
+            z3::SatResult::Unsat | z3::SatResult::Unknown => false,
+            z3::SatResult::Sat => true,
+        };
         self.solver.pop(1);
 
         if !is_good {
@@ -89,19 +96,6 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         }
 
         Some((cand, is_good))
-    }
-
-    fn next_cand(&mut self, cand: &z3::ast::BV<'ctx>) -> bool {
-        let specif = self.candidate_specif(cand);
-        self.solver.assert(&specif);
-        let z3_verdict = self.solver.check();
-        info!("Z3 verdict: {z3_verdict:?}");
-        let is_good = match z3_verdict {
-            z3::SatResult::Unsat | z3::SatResult::Unknown => false,
-            z3::SatResult::Sat => true,
-        };
-
-        is_good
     }
 
     fn counter_specif(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
