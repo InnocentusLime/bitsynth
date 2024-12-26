@@ -81,7 +81,7 @@ impl Expr {
                     binop_action
                 );
 
-                let r = lr.0.walk_expr(
+                let r = lr.1.walk_expr(
                     var_action,
                     unop_action,
                     shift_action,
