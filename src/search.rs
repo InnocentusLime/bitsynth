@@ -126,24 +126,30 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         let consts = &mut self.z3_consts;
         let mut next_const_idx = 0;
 
+        debug!("Convert to z3: {expr:?}");
+
         expr.to_z3(
             &self.z3,
-            |ctx, v| match v {
-                Variable::Argument(idx) => args[idx].clone(),
-                Variable::Const => {
-                    let res = match consts.get(next_const_idx) {
-                        Some(x) => x.clone(),
-                        None => {
-                            let c = Self::new_z3_const(ctx, next_const_idx);
-                            consts.push(c.clone());
-                            c
-                        },
-                    };
+            |ctx, v| {
+                debug!("Var: {v:?}");
 
-                    next_const_idx += 1;
+                match v {
+                    Variable::Argument(idx) => args[idx].clone(),
+                    Variable::Const => {
+                        let res = match consts.get(next_const_idx) {
+                            Some(x) => x.clone(),
+                            None => {
+                                let c = Self::new_z3_const(ctx, next_const_idx);
+                                consts.push(c.clone());
+                                c
+                            },
+                        };
 
-                    res
-                },
+                        next_const_idx += 1;
+
+                        res
+                    },
+                }
             },
         )
     }
