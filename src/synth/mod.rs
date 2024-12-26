@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use crate::expr::{Expr, ExprVal, Variable};
 
 pub struct Example {
-    input: HashMap<Variable, ExprVal>,
-    output: ExprVal,
+    pub input: HashMap<Variable, ExprVal>,
+    pub output: ExprVal,
 }
 
 /// A synthesizer is an iterator-like structure. It can generate
