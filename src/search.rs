@@ -110,6 +110,7 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         z3::ast::forall_const(
             &self.z3,
             &self.z3_consts.iter()
+                .chain(std::iter::once(&self.result_var))
                 .map(|x| x as &dyn z3::ast::Ast)
                 .collect::<Vec<_>>()
             ,
@@ -124,6 +125,7 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         z3::ast::forall_const(
             &self.z3,
             &self.z3_args.iter()
+                .chain(std::iter::once(&self.result_var))
                 .map(|x| x as &dyn z3::ast::Ast)
                 .collect::<Vec<_>>()
             ,
@@ -134,11 +136,11 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
 
     fn cand_constraint(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
         let candeq = cand._eq(self.get_result_var());
+        let specif = z3::ast::Bool::and(&self.z3,
+            self.constraints.iter().collect::<Vec<_>>().as_slice()
+        );
 
-        self.constraints.iter()
-            .fold(candeq, |acc, constraint| {
-                acc & constraint
-            })
+        candeq.implies(&specif)
     }
 
     fn expr_to_z3(&mut self, expr: &Expr) -> z3::ast::BV<'ctx> {
