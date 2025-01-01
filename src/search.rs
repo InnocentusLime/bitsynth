@@ -1,9 +1,7 @@
-use std::collections::HashMap;
 
-use log::{debug, trace};
-use z3::{ast::Ast, SatResult};
+use log::debug;
 
-use crate::{expr::{Expr, Value, BITS_PER_VAL}, oracle::Oracle, synth::Synthesizer};
+use crate::{expr::{Expr, Value}, oracle::Oracle, synth::Synthesizer};
 use crate::conv::*;
 
 #[derive(Clone, Debug)]
