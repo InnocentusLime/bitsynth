@@ -3,9 +3,10 @@ use search::BithackSearch;
 use synth::simple_search::SimpleSearch;
 use z3::ast::Ast;
 
-mod expr;
-mod synth;
 mod search;
+mod synth;
+mod conv;
+mod expr;
 
 use clap::{Parser, Subcommand};
 
@@ -36,8 +37,8 @@ fn main() {
         vec!["x".to_string()],
     );
 
-    let x_var = search.get_argument("x").unwrap();
-    let r_var = search.get_result_var();
+    let x_var = search.converter().get_argument("x").unwrap();
+    let r_var = search.get_result_var().clone();
     // search.add_constraint(
     //     r_var._eq(
     //         &z3::ast::BV::from_i64(&ctx, 0, 32)
