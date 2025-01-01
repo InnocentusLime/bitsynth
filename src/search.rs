@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use log::{debug, info};
+use log::{debug, trace};
 use z3::{ast::Ast, SatResult};
 
 use crate::{expr::{Expr, Value, Variable, BITS_PER_VAL}, synth::Synthesizer};
@@ -104,14 +104,14 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
 
         match answer {
             None => {
-                debug!("Looking for universal counter example");
                 let specif = self.counter_specif(&z3_cand);
 
                 self.solver.push();
                 self.solver.assert(&specif);
                 let z3_verdict = self.solver.check();
-                debug!("Z3 counterexample search: {z3_verdict:?}");
                 self.solver.pop(1);
+
+                debug!("Z3 counterexample search: {z3_verdict:?}");
 
                 Some(SearchStep::IncorrectSample {
                     cand,
@@ -130,8 +130,6 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         let consts = &mut self.z3_consts;
         let mut next_const_idx = 0;
         let model = self.solver.get_model().unwrap();
-
-        debug!("Convert to answer: {expr:?}");
 
         expr.to_ans(
             |v| {
@@ -209,12 +207,12 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         let consts = &mut self.z3_consts;
         let mut next_const_idx = 0;
 
-        debug!("Convert to z3: {expr:?}");
+        trace!("Convert to z3: {expr:?}");
 
         expr.to_z3(
             &self.z3,
             |ctx, v| {
-                debug!("Var: {v:?}");
+                trace!("Var: {v:?}");
 
                 match v {
                     Variable::Argument(idx) => args[idx].clone(),
