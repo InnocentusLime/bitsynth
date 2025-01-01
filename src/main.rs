@@ -7,6 +7,7 @@ mod search;
 mod synth;
 mod conv;
 mod expr;
+mod oracle;
 
 use clap::{Parser, Subcommand};
 
@@ -37,14 +38,14 @@ fn main() {
         vec!["x".to_string()],
     );
 
-    let x_var = search.converter().get_argument("x").unwrap();
-    let r_var = search.get_result_var().clone();
+    let r_var = search.oracle().result_var().clone();
+    let x_var = search.converter().get_argument("x").unwrap().clone();
     // search.add_constraint(
     //     r_var._eq(
     //         &z3::ast::BV::from_i64(&ctx, 0, 32)
     //     )
     // );
-    search.add_constraint(
+    search.oracle().add_constraint(
         r_var._eq(
            &(x_var & 0x2i64)
         )
