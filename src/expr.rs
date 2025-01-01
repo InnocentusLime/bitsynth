@@ -118,7 +118,7 @@ impl Expr {
                 UnopKind::Not => -e,
                 UnopKind::Negate => !e,
             },
-            &mut |is_left, n, e| if is_left {
+            &mut |is_left, e, n| if is_left {
                 e << n
             } else {
                 e >> n
@@ -148,7 +148,7 @@ impl Expr {
                 UnopKind::Not => !e,
                 UnopKind::Negate => -e,
             },
-            &mut |is_left, n, e| if is_left {
+            &mut |is_left, e, n| if is_left {
                 e << n
             } else {
                 e.bvashr(&n)
