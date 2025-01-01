@@ -7,12 +7,25 @@ mod expr;
 mod synth;
 mod search;
 
-fn main() {
-    colog::default_builder()
-        .filter_level(log::LevelFilter::Debug)
-        .init();
+use clap::{Parser, Subcommand};
 
-    info!("Started");
+#[derive(Parser)]
+struct Cli {
+    #[arg(long)]
+    print_debug: bool,
+}
+
+fn main() {
+    let cli = Cli::parse();
+
+    if cli.print_debug {
+        colog::default_builder()
+            .filter_level(log::LevelFilter::Debug)
+            .init();
+    } else {
+        colog::default_builder()
+            .init();
+    }
 
     let cfg = z3::Config::default();
     let ctx = z3::Context::new(&cfg);
