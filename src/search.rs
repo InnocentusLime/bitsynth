@@ -84,13 +84,13 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         let z3_cand = self.expr_to_z3(&cand);
         let mut answer = None;
 
-        info!("Try: {cand:?}");
+        debug!("Try: {cand:?}");
 
         self.solver.push();
         let specif = self.candidate_specif(&z3_cand);
         self.solver.assert(&specif);
         let z3_verdict = self.solver.check();
-        info!("Z3 verdict: {z3_verdict:?}");
+        debug!("Z3 verdict: {z3_verdict:?}");
         let is_good = match z3_verdict {
             z3::SatResult::Unsat | z3::SatResult::Unknown => false,
             z3::SatResult::Sat => true,
@@ -104,13 +104,13 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
 
         match answer {
             None => {
-                info!("Looking for universal counter example");
+                debug!("Looking for universal counter example");
                 let specif = self.counter_specif(&z3_cand);
 
                 self.solver.push();
                 self.solver.assert(&specif);
                 let z3_verdict = self.solver.check();
-                info!("Z3 counterexample search: {z3_verdict:?}");
+                debug!("Z3 counterexample search: {z3_verdict:?}");
                 self.solver.pop(1);
 
                 Some(SearchStep::IncorrectSample {
