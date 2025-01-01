@@ -36,9 +36,16 @@ fn main() {
         )
     );
 
-    while let Some((_cand, _is_good)) = search.step() {
-        info!("Something")
+    while let Some(step) = search.step() {
+        match step {
+            search::SearchStep::IncorrectSample {
+                cand,
+                is_universally_wrong,
+            } => info!("Explored: {cand:?} bad: {is_universally_wrong}"),
+            search::SearchStep::CorrectSample {
+                cand,
+                answer,
+            } => info!("Explored: {cand:?} answer: {answer:?}"),
+        }
     }
-
-    info!("I am leaving");
 }

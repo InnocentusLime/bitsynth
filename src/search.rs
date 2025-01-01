@@ -1,9 +1,21 @@
 use std::collections::HashMap;
 
 use log::{debug, info};
-use z3::ast::Ast;
+use z3::{ast::Ast, SatResult};
 
-use crate::{expr::{Expr, Variable, BITS_PER_VAL}, synth::Synthesizer};
+use crate::{expr::{Expr, Value, Variable, BITS_PER_VAL}, synth::Synthesizer};
+
+#[derive(Clone, Debug)]
+pub enum SearchStep {
+    IncorrectSample {
+        cand: Expr,
+        is_universally_wrong: bool,
+    },
+    CorrectSample {
+        cand: Expr,
+        answer: Expr<Value>,
+    },
+}
 
 pub struct BithackSearch<'ctx, S> {
     solver: z3::Solver<'ctx>,
@@ -67,9 +79,10 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
         self.constraints.push(constraint);
     }
 
-    pub fn step(&mut self) -> Option<(Expr, bool)> {
+    pub fn step(&mut self) -> Option<SearchStep> {
         let cand = self.synth.next_expr()?;
         let z3_cand = self.expr_to_z3(&cand);
+        let mut answer = None;
 
         info!("Try: {cand:?}");
 
@@ -82,20 +95,65 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
             z3::SatResult::Unsat | z3::SatResult::Unknown => false,
             z3::SatResult::Sat => true,
         };
-        self.solver.pop(1);
 
-        if !is_good {
-            info!("Looking for universal counter example");
-            let specif = self.counter_specif(&z3_cand);
-
-            self.solver.push();
-            self.solver.assert(&specif);
-            let z3_verdict = self.solver.check();
-            info!("Z3 counterexample search: {z3_verdict:?}");
-            self.solver.pop(1);
+        if is_good {
+            answer = Some(self.build_ans(&cand))
         }
 
-        Some((cand, is_good))
+        self.solver.pop(1);
+
+        match answer {
+            None => {
+                info!("Looking for universal counter example");
+                let specif = self.counter_specif(&z3_cand);
+
+                self.solver.push();
+                self.solver.assert(&specif);
+                let z3_verdict = self.solver.check();
+                info!("Z3 counterexample search: {z3_verdict:?}");
+                self.solver.pop(1);
+
+                Some(SearchStep::IncorrectSample {
+                    cand,
+                    is_universally_wrong: z3_verdict == SatResult::Sat,
+                })
+            },
+            Some(answer) => Some(SearchStep::CorrectSample {
+                cand,
+                answer,
+            })
+        }
+    }
+
+    fn build_ans(&mut self, expr: &Expr) -> Expr<Value> {
+        let args = &self.arguments;
+        let consts = &mut self.z3_consts;
+        let mut next_const_idx = 0;
+        let model = self.solver.get_model().unwrap();
+
+        debug!("Convert to answer: {expr:?}");
+
+        expr.to_ans(
+            |v| {
+                match v {
+                    Variable::Argument(idx) =>
+                        args.iter()
+                            .find(|(_, other)| **other == idx)
+                            .map(|(name, _)| name.clone())
+                            .map(Value::Arg)
+                            .unwrap(),
+                    Variable::Const => {
+                        let c = &consts[next_const_idx];
+                        let interp = model.get_const_interp(c).unwrap();
+                        let val = interp.as_i64().unwrap() as i32;
+
+                        next_const_idx += 1;
+
+                        Value::Const(val)
+                    },
+                }
+            },
+        )
     }
 
     fn counter_specif(&mut self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
