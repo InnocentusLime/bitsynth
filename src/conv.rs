@@ -77,7 +77,7 @@ impl<'ctx> Z3ToExpr<'ctx> {
         )
     }
 
-    pub fn ans_expr_to_z3(&mut self, expr: &Expr<Value>) -> z3::ast::BV<'ctx> {
+    pub fn ans_expr_to_z3(&self, expr: &Expr<Value>) -> z3::ast::BV<'ctx> {
         expr.to_z3_ans(
             &self.z3,
             |v| self.get_argument(v).unwrap().clone()
