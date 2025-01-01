@@ -13,9 +13,9 @@ pub struct SimpleSearch {
 }
 
 impl SimpleSearch {
-    pub fn new() -> Self {
+    pub fn new(arg_cnt: usize) -> Self {
         SimpleSearch {
-            arg_cnt: 0,
+            arg_cnt,
             last_tried: 0,
             db: vec![
                 Expr::Variable(Variable::Const),
@@ -30,8 +30,8 @@ impl SimpleSearch {
 }
 
 impl Synthesizer for SimpleSearch {
-    fn known_args(&mut self, vars: usize) {
-        self.arg_cnt = vars;
+    fn build(var_count: usize) -> Self {
+        Self::new(var_count)
     }
 
     fn learn(&mut self, _example: super::Example) {

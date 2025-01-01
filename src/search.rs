@@ -27,13 +27,10 @@ pub struct BithackSearch<'ctx, S> {
 impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     pub fn new(
         z3: &'ctx z3::Context,
-        mut synth: S,
         arguments: Vec<String>,
     ) -> Self {
-        synth.known_args(arguments.len());
-
         Self {
-            synth,
+            synth: S::build(arguments.len()),
             converter: Z3ToExpr::new(z3, arguments),
             oracle: Oracle::new(z3),
         }

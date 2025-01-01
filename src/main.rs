@@ -32,9 +32,8 @@ fn main() {
     let cfg = z3::Config::default();
     let ctx = z3::Context::new(&cfg);
 
-    let mut search = BithackSearch::new(
+    let mut search = BithackSearch::<SimpleSearch>::new(
         &ctx,
-        SimpleSearch::new(),
         vec!["x".to_string()],
     );
 

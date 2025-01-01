@@ -14,12 +14,7 @@ pub struct Example {
 /// be provided with examples to "learn". This allows synthesizers
 /// to speed up the search.
 pub trait Synthesizer {
-    /// Supply the argument names to the synthesizer. The synthesizer
-    /// cannot introduce new arguments to a formula, so it is required
-    /// to use what it has.
-    ///
-    /// For simplicity, the variables are contigiously enumerated.
-    fn known_args(&mut self, var_count: usize);
+    fn build(var_count: usize) -> Self;
 
     /// Asks the synthesizer to take a new example into account. This is
     /// for potential optimisation of the search, so the synthesizer does not
