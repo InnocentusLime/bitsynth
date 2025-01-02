@@ -5,11 +5,6 @@ use std::collections::HashMap;
 
 use crate::expr::{Expr, ExprVal, Variable};
 
-pub struct Example {
-    pub input: HashMap<Variable, ExprVal>,
-    pub output: ExprVal,
-}
-
 /// A synthesizer is an iterator-like structure. It can generate
 /// new expression candidates, but in addition to that it can also
 /// be provided with examples to "learn". This allows synthesizers
@@ -17,10 +12,9 @@ pub struct Example {
 pub trait Synthesizer {
     fn build(var_count: usize, depth_limit: usize) -> Self;
 
-    /// Asks the synthesizer to take a new example into account. This is
-    /// for potential optimisation of the search, so the synthesizer does not
-    /// end up producing expressions, that "definitely aren't going to work".
-    fn learn(&mut self, example: Example);
+    /// Reports to the synthesizer, that the produced candidate is
+    /// "universally bad". This can be used to reduce the search space.
+    fn bad_cand(&mut self, cand: &Expr);
 
     /// Query the synthesizer for a next expression to try. The synthesizer
     /// may return `None` if it can no longer provide any new candidate.

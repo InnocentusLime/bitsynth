@@ -37,7 +37,7 @@ impl Synthesizer for SimpleSearch {
         Self::new(var_count)
     }
 
-    fn learn(&mut self, _example: super::Example) {
+    fn bad_cand(&mut self, _expr: &Expr) {
         /* We do not learn. */
     }
 

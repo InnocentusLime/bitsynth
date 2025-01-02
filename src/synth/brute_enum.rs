@@ -208,7 +208,7 @@ impl Synthesizer for BruteEnum {
         }
     }
 
-    fn learn(&mut self, _example: super::Example) {
+    fn bad_cand(&mut self, _cand: &Expr) {
         // A brute doesn't learn
     }
 
