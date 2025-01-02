@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::expr::{Expr, Variable};
 
 use super::Synthesizer;
@@ -20,10 +22,11 @@ impl SimpleSearch {
             db: vec![
                 Expr::Variable(Variable::Const),
                 Expr::Variable(Variable::Argument(0)),
-                Expr::Binop(crate::expr::BinopKind::And, Box::new((
-                    Expr::Variable(Variable::Argument(0)),
-                    Expr::Variable(Variable::Const)
-                )))
+                Expr::Binop(
+                    crate::expr::BinopKind::And,
+                    Rc::new(Expr::Variable(Variable::Argument(0))),
+                    Rc::new(Expr::Variable(Variable::Const)),
+                )
             ],
          }
     }

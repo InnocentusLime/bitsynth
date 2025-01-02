@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::expr::{BinopKind, Expr, ExprSkeleton, UnopKind, Variable};
 
 use super::Synthesizer;
@@ -162,9 +164,16 @@ impl ExprBreadth {
         ];
 
         let unop_substs = all_unops.into_iter()
-            .map(|x| ExprSkeleton::Unop(x, Box::new(ExprSkeleton::Variable(()))));
+            .map(|x| ExprSkeleton::Unop(
+                x,
+                Rc::new(ExprSkeleton::Variable(()))
+            ));
         let binop_substs = all_binops.into_iter()
-            .map(|x| ExprSkeleton::Binop(x, Box::new((ExprSkeleton::Variable(()), ExprSkeleton::Variable(())))));
+            .map(|x| ExprSkeleton::Binop(
+                x,
+                Rc::new(ExprSkeleton::Variable(())),
+                Rc::new(ExprSkeleton::Variable(())),
+            ));
 
         unop_substs.chain(binop_substs)
     }

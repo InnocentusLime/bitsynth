@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 pub const BITS_PER_VAL: u32 = 32;
 pub type ExprVal = i32;
 
@@ -33,8 +35,8 @@ pub enum BinopKind {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expr<V = Variable> {
     Variable(V),
-    Unop(UnopKind, Box<Expr<V>>),
-    Binop(BinopKind, Box<(Expr<V>, Expr<V>)>),
+    Unop(UnopKind, Rc<Expr<V>>),
+    Binop(BinopKind, Rc<Expr<V>>, Rc<Expr<V>>),
 }
 
 pub type ExprSkeleton = Expr<()>;
@@ -68,15 +70,15 @@ impl<VarT> Expr<VarT> {
 
                 unop_action(*unop_kind, expr)
             },
-            Expr::Binop(binop_kind, lr) => {
-                let l = lr.0.walk_expr(
+            Expr::Binop(binop_kind, l, r) => {
+                let l = l.walk_expr(
                     var_action,
                     unop_action,
                     binop_action,
                     var_promote,
                 );
 
-                let r = lr.1.walk_expr(
+                let r = r.walk_expr(
                     var_action,
                     unop_action,
                     binop_action,
@@ -162,10 +164,10 @@ impl Expr {
         self.walk_expr(
             &mut |v| var_map(*v),
             &mut |unop_kind, e| {
-                Expr::Unop(unop_kind, Box::new(e))
+                Expr::Unop(unop_kind, Rc::new(e))
             },
             &mut |binop_kind, l, r| {
-                Expr::Binop(binop_kind, Box::new((l, r)))
+                Expr::Binop(binop_kind, Rc::new(l), Rc::new(r))
             },
             &mut |x| Expr::Variable(x),
         )
@@ -225,10 +227,10 @@ impl ExprSkeleton {
         self.walk_expr(
             &mut hole_action,
             &mut |unop_kind, e| {
-                Expr::Unop(unop_kind, Box::new(e))
+                Expr::Unop(unop_kind, Rc::new(e))
             },
             &mut |binop_kind, l, r| {
-                Expr::Binop(binop_kind, Box::new((l, r)))
+                Expr::Binop(binop_kind, Rc::new(l), Rc::new(r))
             },
             &mut promote
         )
