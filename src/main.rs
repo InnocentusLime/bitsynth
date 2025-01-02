@@ -1,4 +1,4 @@
-use expr::AnswerExpr;
+use expr::{AnswerExpr, BITS_PER_VAL};
 use log::info;
 use search::BithackSearch;
 use synth::{brute_enum::BruteEnum, simple_search::SimpleSearch};
@@ -44,11 +44,26 @@ fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
     //         &z3::ast::BV::from_i64(&ctx, 0, 32)
     //     )
     // );
+    // search.oracle().add_constraint(
+    //     r_var._eq(
+    //        &(x_var * 8i64)
+    //     )
+    // );
     search.oracle().add_constraint(
-        r_var._eq(
-           &(x_var * 8i64)
+        x_var.clone().bvsle(
+            &z3::ast::BV::from_i64(&ctx, 0, BITS_PER_VAL)
+        ).implies(
+            &r_var._eq(&-x_var.clone())
         )
     );
+    search.oracle().add_constraint(
+        x_var.clone().bvsgt(
+            &z3::ast::BV::from_i64(&ctx, 0, BITS_PER_VAL)
+        ).implies(
+            &r_var._eq(&x_var.clone())
+        )
+    );
+
 
     while let Some(step) = search.step() {
         match step {
