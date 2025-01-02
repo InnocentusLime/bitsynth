@@ -1,3 +1,4 @@
+use bitsynth::synth::brute_enum::BruteEnum;
 use bitsynth::synth::simple_search::SimpleSearch;
 use bitsynth::{conv::Z3ToExpr, expr::BITS_PER_VAL, search::BithackSearch, synth::Synthesizer};
 use z3::ast::Ast;
@@ -73,9 +74,9 @@ pub fn run_tests_with_z3<F>(f: F)
 where
     F: FnOnce(z3::Context),
 {
-    colog::default_builder()
+    let _ = colog::default_builder()
         .filter_level(log::LevelFilter::Debug)
-        .init();
+        .try_init();
 
     let cfg = z3::Config::default();
     let ctx = z3::Context::new(&cfg);
@@ -115,5 +116,13 @@ fn test_simple_search_simple_funeq() {
     run_tests_with_z3(|z3| {
         let tests = simple_funeq_challenges();
         FuneqChallenge::perform_tests::<SimpleSearch>(tests, &z3);
+    });
+}
+
+#[test]
+fn test_brute_enum_search_simple_funeq() {
+    run_tests_with_z3(|z3| {
+        let tests = simple_funeq_challenges();
+        FuneqChallenge::perform_tests::<BruteEnum>(tests, &z3);
     });
 }
