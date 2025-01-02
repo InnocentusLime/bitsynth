@@ -67,6 +67,10 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
                     false
                 };
 
+                if is_universally_wrong {
+                    self.synth.bad_cand(&cand);
+                }
+
                 SearchStep::IncorrectSample {
                     is_universally_wrong,
                     cand,
