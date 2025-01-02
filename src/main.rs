@@ -1,6 +1,6 @@
 use log::info;
 use search::BithackSearch;
-use synth::simple_search::SimpleSearch;
+use synth::{brute_enum::BruteEnum, simple_search::SimpleSearch};
 use z3::ast::Ast;
 
 mod search;
@@ -29,13 +29,14 @@ fn main() {
             .init();
     }
 
-    let cfg = z3::Config::default();
+    let mut cfg = z3::Config::default();
+    cfg.set_timeout_msec(300);
     let ctx = z3::Context::new(&cfg);
 
-    let mut search = BithackSearch::<SimpleSearch>::new(
+    let mut search = BithackSearch::<BruteEnum>::new(
         &ctx,
         vec!["x".to_string()],
-        10,
+        3,
     );
 
     let r_var = search.oracle().result_var().clone();
@@ -47,7 +48,7 @@ fn main() {
     // );
     search.oracle().add_constraint(
         r_var._eq(
-           &(x_var & 0x2i64)
+           &(x_var * 8i64)
         )
     );
 
@@ -60,7 +61,10 @@ fn main() {
             search::SearchStep::CorrectSample {
                 cand,
                 answer,
-            } => info!("Explored: {cand:?} answer: {answer:?}"),
+            } => {
+                info!("Explored: {cand:?} answer: {answer:?}");
+                return;
+            },
         }
     }
 }
