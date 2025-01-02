@@ -79,15 +79,20 @@ pub struct ExprBreadth {
 
 impl ExprBreadth {
     pub fn new(arg_count: usize, breadth_limit: usize) -> Self {
-        Self {
+        let mut res = Self {
             breadth_limit,
             skeleton_idx: 0,
             expr_enum: ExprIdx::new(arg_count),
             skeletons: vec![Expr::Variable(())],
-        }
+        };
+
+        res.expr_enum.reset(&res.skeletons[0]);
+
+        res
     }
 
-    // NOTE: if we find a prettier way to do it -- do it asap
+    // NOTE: if we find a prettier way to do it -- do it asap, because currently
+    // resetting stuff is very ugly looking
     pub fn next(&mut self) -> Option<Expr> {
         if self.skeletons.len() >= self.breadth_limit {
             return None;
