@@ -1,10 +1,14 @@
+use std::collections::HashSet;
+
 use bitsynth::synth::brute_enum::BruteEnum;
 use bitsynth::synth::simple_search::SimpleSearch;
 use bitsynth::{conv::Z3ToExpr, expr::BITS_PER_VAL, search::BithackSearch, synth::Synthesizer};
+use log::warn;
 use z3::ast::Ast;
 
 pub const EASY_DEPTH_LIMIT: usize = 5;
-pub const EASY_SEARCH_LIMIT: usize = 100_000;
+pub const EASY_SEARCH_LIMIT: usize = 1_00;
+pub const EASY_Z3_TIMEOUT: u64 = 200;
 
 pub struct FuneqChallenge {
     args: Vec<String>,
@@ -44,6 +48,7 @@ impl FuneqChallenge {
             EASY_DEPTH_LIMIT,
         );
         let fun = (self.builder)(z3, search.converter());
+        let mut memory = HashSet::new();
 
         let res_var = search.oracle().result_var().clone();
         search.oracle().add_constraint(res_var._eq(&fun));
@@ -51,17 +56,25 @@ impl FuneqChallenge {
         let mut found = false;
         let mut step_cnt = 0;
         while let Some(step) = search.step() {
-            if step_cnt >= EASY_SEARCH_LIMIT { break; }
+            if step_cnt >= EASY_SEARCH_LIMIT {
+                warn!("Searcher took too many steps");
+                break;
+            }
             match step {
                 // TODO: fact check the synthesizer there?
-                bitsynth::search::SearchStep::IncorrectSample { .. } => (),
+                bitsynth::search::SearchStep::IncorrectSample { cand, .. } => {
+                    let is_new = memory.insert(cand);
+                    assert!(is_new);
+                },
                 bitsynth::search::SearchStep::CorrectSample {
                     answer,
-                    ..
+                    cand,
                 } => {
                     let res = search.converter().ans_expr_to_z3(&answer);
                     assert!(tester(&fun, &res));
                     found = true;
+                    let is_new = memory.insert(cand);
+                    assert!(is_new);
                 },
             }
 
@@ -80,7 +93,9 @@ where
         .filter_level(log::LevelFilter::Debug)
         .try_init();
 
-    let cfg = z3::Config::default();
+    let mut cfg = z3::Config::default();
+    cfg.set_timeout_msec(EASY_Z3_TIMEOUT);
+
     let ctx = z3::Context::new(&cfg);
 
     f(ctx)
