@@ -1,3 +1,4 @@
+use expr::AnswerExpr;
 use log::info;
 use search::BithackSearch;
 use synth::{brute_enum::BruteEnum, simple_search::SimpleSearch};
@@ -13,22 +14,13 @@ use clap::Parser;
 
 #[derive(Parser)]
 struct Cli {
-    #[arg(long)]
-    print_debug: bool,
+    #[arg(short, long)]
+    trace: bool,
+    #[arg(short, long)]
+    verbose: bool,
 }
 
-fn main() {
-    let cli = Cli::parse();
-
-    if cli.print_debug {
-        colog::default_builder()
-            .filter_level(log::LevelFilter::Debug)
-            .init();
-    } else {
-        colog::default_builder()
-            .init();
-    }
-
+fn perform_search() -> Option<AnswerExpr> {
     let mut cfg = z3::Config::default();
     // cfg.set_timeout_msec(300);
     let ctx = z3::Context::new(&cfg);
@@ -64,8 +56,28 @@ fn main() {
                 answer,
             } => {
                 info!("Explored: {cand:?} answer: {answer:?}");
-                return;
+                return Some(answer);
             },
         }
+    }
+
+    None
+}
+
+fn main() {
+    let cli = Cli::parse();
+
+    if cli.verbose {
+        colog::default_builder()
+            .filter_level(log::LevelFilter::Debug)
+            .init();
+    } else if cli.trace {
+        colog::default_builder()
+            .init();
+    }
+
+    match perform_search() {
+        Some(ans) => println!("Found: {:?}", ans),
+        None => println!("No fitting expression found"),
     }
 }
