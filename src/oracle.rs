@@ -20,7 +20,7 @@ impl<'ctx> Oracle<'ctx> {
             solver: z3::Solver::new(z3),
             result_var: z3::ast::BV::new_const(
                 &z3,
-                "result",
+                "res",
                 BITS_PER_VAL,
             ),
         }

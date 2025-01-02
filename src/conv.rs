@@ -21,8 +21,8 @@ impl<'ctx> Z3ToExpr<'ctx> {
                 .enumerate()
                 .map(|(idx, arg_name)| (arg_name, idx))
                 .collect::<HashMap<_, _>>();
-        let z3_args = (0..arguments.len())
-            .map(|idx| Self::new_z3_arg(z3, idx))
+        let z3_args = arguments.keys()
+            .map(|name| Self::new_z3_arg(z3, name))
             .collect();
 
         Self {
@@ -125,10 +125,10 @@ impl<'ctx> Z3ToExpr<'ctx> {
         )
     }
 
-    fn new_z3_arg(ctx: &z3::Context, idx: usize) -> z3::ast::BV<'_> {
+    fn new_z3_arg<'a>(ctx: &'a z3::Context, name: &str) -> z3::ast::BV<'a> {
         z3::ast::BV::new_const(
             ctx,
-            format!("arg{idx:}"),
+            name,
             BITS_PER_VAL,
         )
     }
