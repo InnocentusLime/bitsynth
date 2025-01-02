@@ -1,9 +1,8 @@
 pub mod simple_search;
 pub mod brute_enum;
 
-use std::collections::HashMap;
 
-use crate::expr::{Expr, ExprVal, Variable};
+use crate::expr::Expr;
 
 /// A synthesizer is an iterator-like structure. It can generate
 /// new expression candidates, but in addition to that it can also
