@@ -87,6 +87,15 @@ impl<VarT> Expr<VarT> {
             },
         }
     }
+
+    pub fn expr_depth(&self) -> usize {
+        self.walk_expr(
+            &mut |_| 0,
+            &mut |_, x| x + 1,
+            &mut |_, l, r| 1 + std::cmp::max(l, r),
+            &mut |x| x,
+        )
+    }
 }
 
 impl Expr {
