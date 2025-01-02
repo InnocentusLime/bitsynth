@@ -12,6 +12,8 @@ mod oracle;
 
 use clap::Parser;
 
+const BITSYNTH_STEP_LIMIMT: u64 = 10_000;
+
 #[derive(Parser)]
 struct Cli {
     #[arg(short, long)]
@@ -64,8 +66,19 @@ fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
         )
     );
 
-
+    let mut total_explored = 0;
     while let Some(step) = search.step() {
+        total_explored += 1;
+
+        if total_explored % 100 == 0 {
+            println!("Explored: {total_explored}");
+        }
+
+        if total_explored == BITSYNTH_STEP_LIMIMT {
+            println!("Too much");
+            break;
+        }
+
         match step {
             search::SearchStep::IncorrectSample {
                 cand,
@@ -76,6 +89,7 @@ fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
                 answer,
             } => {
                 info!("Explored: {cand:?} answer: {answer:?}");
+                println!("Total explored: {total_explored}");
                 return Some(answer);
             },
         }
