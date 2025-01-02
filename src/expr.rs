@@ -26,17 +26,14 @@ pub enum BinopKind {
     Xor,
     Plus,
     Minus,
+    Shl,
+    ShrA,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expr<V = Variable> {
     Variable(V),
     Unop(UnopKind, Box<Expr<V>>),
-    Shift {
-        is_left: bool,
-        n: V,
-        expr: Box<Expr<V>>,
-    },
     Binop(BinopKind, Box<(Expr<V>, Expr<V>)>),
 }
 
@@ -46,18 +43,16 @@ pub type AnswerExpr = Expr<Value>;
 impl<VarT> Expr<VarT> {
     // NOTE: if stack starts overfilling -- that should be the first
     // function we turn non-recursive.
-    pub fn walk_expr<T, V, U, S, B, Var, Prom>(
+    pub fn walk_expr<T, V, U, B, Var, Prom>(
         &self,
         var_action: &mut V,
         unop_action: &mut U,
-        shift_action: &mut S,
         binop_action: &mut B,
         var_promote: &mut Prom,
     ) -> T
     where
         V: FnMut(&VarT) -> Var,
         U: FnMut(UnopKind, T) -> T,
-        S: FnMut(bool, T, Var) -> T,
         B: FnMut(BinopKind, T, T) -> T,
         Prom: FnMut(Var) -> T,
     {
@@ -67,30 +62,16 @@ impl<VarT> Expr<VarT> {
                 let expr = expr.walk_expr(
                     var_action,
                     unop_action,
-                    shift_action,
                     binop_action,
                     var_promote,
                 );
 
                 unop_action(*unop_kind, expr)
             },
-            Expr::Shift { is_left, n, expr } => {
-                let expr = expr.walk_expr(
-                    var_action,
-                    unop_action,
-                    shift_action,
-                    binop_action,
-                    var_promote,
-                );
-                let n = var_action(n);
-
-                shift_action(*is_left, expr, n)
-            },
             Expr::Binop(binop_kind, lr) => {
                 let l = lr.0.walk_expr(
                     var_action,
                     unop_action,
-                    shift_action,
                     binop_action,
                     var_promote,
                 );
@@ -98,7 +79,6 @@ impl<VarT> Expr<VarT> {
                 let r = lr.1.walk_expr(
                     var_action,
                     unop_action,
-                    shift_action,
                     binop_action,
                     var_promote,
                 );
@@ -123,17 +103,14 @@ impl Expr {
                 UnopKind::Not => -e,
                 UnopKind::Negate => !e,
             },
-            &mut |is_left, e, n| if is_left {
-                e << n
-            } else {
-                e >> n
-            },
             &mut |binop_kind, l, r| match binop_kind {
                 BinopKind::And => l & r,
                 BinopKind::Or => l | r,
                 BinopKind::Xor => l ^ r,
                 BinopKind::Plus => l + r,
                 BinopKind::Minus => l - r,
+                BinopKind::Shl => l << r,
+                BinopKind::ShrA => l >> r,
             },
             &mut |x| x,
         )
@@ -153,17 +130,14 @@ impl Expr {
                 UnopKind::Not => !e,
                 UnopKind::Negate => -e,
             },
-            &mut |is_left, e, n| if is_left {
-                e << n
-            } else {
-                e.bvashr(&n)
-            },
             &mut |binop_kind, l, r| match binop_kind {
                 BinopKind::And => l & r,
                 BinopKind::Or => l | r,
                 BinopKind::Xor => l ^ r,
                 BinopKind::Plus => l + r,
                 BinopKind::Minus => l - r,
+                BinopKind::Shl => l << r,
+                BinopKind::ShrA => l.bvashr(&r),
             },
             &mut |x| x,
         )
@@ -180,9 +154,6 @@ impl Expr {
             &mut |v| var_map(*v),
             &mut |unop_kind, e| {
                 Expr::Unop(unop_kind, Box::new(e))
-            },
-            &mut |is_left, e, n| {
-                Expr::Shift { is_left, n, expr: Box::new(e) }
             },
             &mut |binop_kind, l, r| {
                 Expr::Binop(binop_kind, Box::new((l, r)))
@@ -210,17 +181,14 @@ impl AnswerExpr {
                 UnopKind::Not => !e,
                 UnopKind::Negate => -e,
             },
-            &mut |is_left, e, n| if is_left {
-                e << n
-            } else {
-                e.bvashr(&n)
-            },
             &mut |binop_kind, l, r| match binop_kind {
                 BinopKind::And => l & r,
                 BinopKind::Or => l | r,
                 BinopKind::Xor => l ^ r,
                 BinopKind::Plus => l + r,
                 BinopKind::Minus => l - r,
+                BinopKind::Shl => l << r,
+                BinopKind::ShrA => l.bvashr(&r),
             },
             &mut |x| x,
         )
