@@ -17,6 +17,7 @@ pub enum SearchStep {
 }
 
 pub struct BithackSearch<'ctx, S> {
+    should_learn: bool,
     synth: S,
     oracle: Oracle<'ctx>,
     converter: Z3ToExpr<'ctx>,
@@ -24,11 +25,13 @@ pub struct BithackSearch<'ctx, S> {
 
 impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     pub fn new(
+        should_learn: bool,
         z3: &'ctx z3::Context,
         arguments: Vec<String>,
         depth_limit: usize,
     ) -> Self {
         Self {
+            should_learn,
             synth: S::build(arguments.len(), depth_limit),
             converter: Z3ToExpr::new(z3, arguments),
             oracle: Oracle::new(z3),
@@ -54,12 +57,20 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
                 answer: self.converter.build_answer(&cand, &model),
                 cand,
             },
-            None => SearchStep::IncorrectSample {
-                is_universally_wrong: self.oracle.has_universal_counterexample(
-                    &z3_cand,
-                    self.converter.z3_consts(),
-                ),
-                cand,
+            None => {
+                let is_universally_wrong = if self.should_learn {
+                    self.oracle.has_universal_counterexample(
+                        &z3_cand,
+                        self.converter.z3_consts(),
+                    )
+                } else {
+                    false
+                };
+
+                SearchStep::IncorrectSample {
+                    is_universally_wrong,
+                    cand,
+                }
             },
         })
     }

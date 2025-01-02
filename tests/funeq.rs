@@ -17,6 +17,7 @@ pub struct FuneqChallenge {
 
 impl FuneqChallenge {
     pub fn perform_tests<'ctx, S: Synthesizer>(
+        should_learn: bool,
         tests: impl IntoIterator<Item = FuneqChallenge>,
         z3: &'ctx z3::Context,
     ) {
@@ -30,11 +31,16 @@ impl FuneqChallenge {
             veridct == z3::SatResult::Unsat
         };
 
-        tests.into_iter().for_each(|x| x.perform::<S, _>(z3, &tester));
+        tests.into_iter().for_each(|x| x.perform::<S, _>(
+            should_learn,
+            z3,
+            &tester,
+        ));
     }
 
     fn perform<'ctx, S, O>(
         self,
+        should_learn: bool,
         z3: &'ctx z3::Context,
         mut tester: O,
     )
@@ -43,6 +49,7 @@ impl FuneqChallenge {
         O: FnMut(&z3::ast::BV, &z3::ast::BV) -> bool,
     {
         let mut search = BithackSearch::<S>::new(
+            should_learn,
             z3,
             self.args.clone(),
             EASY_DEPTH_LIMIT,
@@ -132,7 +139,7 @@ pub fn simple_funeq_challenges() -> Vec<FuneqChallenge> {
 fn test_simple_search_simple_funeq() {
     run_tests_with_z3(|z3| {
         let tests = simple_funeq_challenges();
-        FuneqChallenge::perform_tests::<SimpleSearch>(tests, &z3);
+        FuneqChallenge::perform_tests::<SimpleSearch>(false, tests, &z3);
     });
 }
 
@@ -140,6 +147,6 @@ fn test_simple_search_simple_funeq() {
 fn test_brute_enum_search_simple_funeq() {
     run_tests_with_z3(|z3| {
         let tests = simple_funeq_challenges();
-        FuneqChallenge::perform_tests::<BruteEnum>(tests, &z3);
+        FuneqChallenge::perform_tests::<BruteEnum>(false, tests, &z3);
     });
 }

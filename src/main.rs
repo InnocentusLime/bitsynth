@@ -30,10 +30,11 @@ fn main() {
     }
 
     let mut cfg = z3::Config::default();
-    cfg.set_timeout_msec(300);
+    // cfg.set_timeout_msec(300);
     let ctx = z3::Context::new(&cfg);
 
     let mut search = BithackSearch::<BruteEnum>::new(
+        false,
         &ctx,
         vec!["x".to_string()],
         3,
