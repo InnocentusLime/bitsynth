@@ -194,3 +194,62 @@ impl AnswerExpr {
         )
     }
 }
+
+impl ExprSkeleton {
+    pub fn morph<H, V, T, Prom>(
+        &self,
+        mut hole_action: H,
+        mut promote: Prom,
+    ) -> Expr<V>
+    where
+        H: FnMut(usize) -> T,
+        Prom: FnMut(T) -> Expr<V>,
+    {
+        let mut hole_idx = 0;
+        let mut hole_action = move |_: &()| {
+            let res = hole_action(hole_idx);
+            hole_idx += 1;
+
+            res
+        };
+
+        self.walk_expr(
+            &mut hole_action,
+            &mut |unop_kind, e| {
+                Expr::Unop(unop_kind, Box::new(e))
+            },
+            &mut |binop_kind, l, r| {
+                Expr::Binop(binop_kind, Box::new((l, r)))
+            },
+            &mut promote
+        )
+    }
+
+    pub fn to_expr<V>(&self, hole_action: V) -> Expr
+    where
+        V: FnMut(usize) -> Variable,
+    {
+        self.morph(hole_action, Expr::Variable)
+    }
+
+    pub fn subst_hole(&self, target_idx: usize, skele: &ExprSkeleton) -> Self
+    {
+        self.morph(
+            |hole_idx| if hole_idx == target_idx {
+                skele.clone()
+            } else {
+                ExprSkeleton::Variable(())
+            },
+            |x| x
+        )
+    }
+
+    pub fn count_holes(&self) -> usize {
+        self.walk_expr(
+            &mut |_| 1,
+            &mut |_, e| e,
+            &mut |_, l, r| l + r,
+            &mut |x| x
+        )
+    }
+}
