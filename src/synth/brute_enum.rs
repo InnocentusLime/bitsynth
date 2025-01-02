@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{iter::FusedIterator, rc::Rc};
 
 use crate::expr::{BinopKind, Expr, ExprSkeleton, UnopKind, Variable};
 
@@ -7,38 +7,25 @@ use super::Synthesizer;
 pub struct ExprIdx {
     arg_count: usize,
     limit_reached: bool,
+    skele: Rc<ExprSkeleton>,
     hole_buff: Vec<usize>, // 0 -- const, n+1 -- argument n
 }
 
 impl ExprIdx {
     pub fn new(arg_count: usize) -> Self {
         Self {
-            limit_reached: false,
+            skele: Rc::new(Expr::Variable(())),
+            limit_reached: true,
             arg_count,
             hole_buff: Vec::new(),
         }
     }
 
-    pub fn reset(&mut self, skele: &ExprSkeleton) {
+    pub fn reset(&mut self, new_skele: Rc<ExprSkeleton>) {
         self.hole_buff.clear();
         self.limit_reached = false;
-        self.hole_buff.extend((0..skele.count_holes()).map(|_| 0));
-    }
-
-    pub fn next_expr(&mut self, skele: &ExprSkeleton) -> Option<Expr> {
-        if self.limit_reached { return None; }
-
-        let res = self.produce(skele);
-        self.increment();
-
-        Some(res)
-    }
-
-    pub fn produce(&self, skele: &ExprSkeleton) -> Expr {
-        // NOTE: this assert failing is 100% an API misuse
-        assert_eq!(self.hole_buff.len(), skele.count_holes(), "You forgot to call reset");
-
-        skele.to_expr(|idx| self.digit_to_var(self.hole_buff[idx]))
+        self.skele = new_skele;
+        self.hole_buff.extend((0..self.skele.count_holes()).map(|_| 0));
     }
 
     fn digit_to_var(&self, digit: usize) -> Variable {
@@ -47,6 +34,10 @@ impl ExprIdx {
         } else {
             Variable::Argument(digit - 1)
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.limit_reached
     }
 
     pub fn increment(&mut self) {
@@ -70,71 +61,54 @@ impl ExprIdx {
     }
 }
 
-pub struct ExprBreadth {
-    depth_limit: usize,
-    skeleton_idx: usize,
-    expr_enum: ExprIdx,
-    skeletons: Vec<ExprSkeleton>,
-}
+impl Iterator for ExprIdx {
+    type Item = Expr;
 
-impl ExprBreadth {
-    pub fn new(arg_count: usize, depth_limit: usize) -> Self {
-        let mut res = Self {
-            depth_limit,
-            skeleton_idx: 0,
-            expr_enum: ExprIdx::new(arg_count),
-            skeletons: vec![Expr::Variable(())],
-        };
-
-        res.expr_enum.reset(&res.skeletons[0]);
-
-        res
-    }
-
-    // NOTE: if we find a prettier way to do it -- do it asap, because currently
-    // resetting stuff is very ugly looking
-    pub fn next(&mut self) -> Option<Expr> {
-        if self.skeletons.len() == 0 {
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.limit_reached {
             return None;
         }
 
-        // This loop looks a bit ass-backwards, but it is the best thing
-        // to do, when generators aren't available yet.
-        loop {
-            let curr_skele = &self.skeletons[self.skeleton_idx];
-            let attempt = self.expr_enum.next_expr(curr_skele);
+        let res = self.skele.to_expr(|idx|
+            self.digit_to_var(self.hole_buff[idx])
+        );
 
-            // Perhaps we haven't run out of expression for a single skelly?
-            if attempt.is_some() {
-                return attempt;
-            }
+        self.increment();
 
-            // Maybe we have more skellies to explore!
-            self.skeleton_idx += 1;
-            if let Some(skele) = self.skeletons.get(self.skeleton_idx) {
-                self.expr_enum.reset(skele);
-                continue;
-            }
+        Some(res)
+    }
+}
 
-            // Aw, dang it.
-            self.expand_holes();
+impl FusedIterator for ExprIdx {
+
+}
+
+pub struct SkeletonIdx {
+    depth_limit: usize,
+    skeleton_idx: usize,
+    skeletons: Vec<Rc<ExprSkeleton>>,
+}
+
+impl SkeletonIdx {
+    pub fn new(depth_limit: usize) -> Self {
+        Self {
+            depth_limit,
+            skeleton_idx: 0,
+            skeletons: vec![Rc::new(Expr::Variable(()))],
         }
     }
 
-    fn expand_holes(&mut self) {
+    pub fn expand_holes(&mut self) {
         self.skeleton_idx = 0;
 
         let new_skeletons = self.skeletons.iter()
-            .flat_map(Self::grow_skeleton)
+            .flat_map(|x| Self::grow_skeleton(&x))
+            .map(Rc::new)
             .collect();
 
         self.skeletons = new_skeletons;
 
         self.skeletons.retain(|x| x.expr_depth() <= self.depth_limit);
-
-        if self.skeletons.len() > 0 {
-            self.expr_enum.reset(&self.skeletons[0]);
-        }
     }
 
     // NOTE: this procedure is more than likely suboptimal
@@ -176,6 +150,50 @@ impl ExprBreadth {
             ));
 
         unop_substs.chain(binop_substs)
+    }
+}
+
+impl Iterator for SkeletonIdx {
+    type Item = Rc<ExprSkeleton>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let res = self.skeletons.get(self.skeleton_idx)?.clone();
+
+        self.skeleton_idx += 1;
+
+        Some(res)
+    }
+}
+
+impl FusedIterator for SkeletonIdx {
+
+}
+
+pub struct ExprBreadth {
+    expr_iter: ExprIdx,
+    skele_iter: SkeletonIdx,
+}
+
+impl ExprBreadth {
+    pub fn new(arg_count: usize, depth_limit: usize) -> Self {
+        Self {
+            expr_iter: ExprIdx::new(arg_count),
+            skele_iter: SkeletonIdx::new(depth_limit),
+        }
+    }
+
+    pub fn next(&mut self) -> Option<Expr> {
+        if self.expr_iter.is_empty() {
+            let skele = self.skele_iter.next()
+                .or_else(|| {
+                    self.skele_iter.expand_holes();
+                    self.skele_iter.next()
+                });
+
+            self.expr_iter.reset(skele?);
+        }
+
+        self.expr_iter.next()
     }
 }
 
