@@ -50,7 +50,7 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
 
         Some(match self.oracle.check_candidate(&z3_cand, self.converter.z3_args()) {
             Some(model) => SearchStep::CorrectSample {
-                answer: self.converter.build_ans(&cand, &model),
+                answer: self.converter.build_answer(&cand, &model),
                 cand,
             },
             None => SearchStep::IncorrectSample {

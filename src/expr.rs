@@ -40,6 +40,9 @@ pub enum Expr<V = Variable> {
     Binop(BinopKind, Box<(Expr<V>, Expr<V>)>),
 }
 
+pub type ExprSkeleton = Expr<()>;
+pub type AnswerExpr = Expr<Value>;
+
 impl<VarT> Expr<VarT> {
     // NOTE: if stack starts overfilling -- that should be the first
     // function we turn non-recursive.
@@ -189,7 +192,7 @@ impl Expr {
     }
 }
 
-impl Expr<Value> {
+impl AnswerExpr {
     pub fn to_z3_ans<'ctx, V>(
         &self,
         ctx: &'ctx z3::Context,

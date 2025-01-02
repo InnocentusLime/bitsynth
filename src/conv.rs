@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use log::trace;
 
-use crate::expr::{Expr, Value, Variable, BITS_PER_VAL};
+use crate::expr::{AnswerExpr, Expr, Value, Variable, BITS_PER_VAL};
 
 pub struct Z3ToExpr<'ctx> {
     z3: &'ctx z3::Context,
@@ -49,7 +49,7 @@ impl<'ctx> Z3ToExpr<'ctx> {
         Some(&self.z3_args[*id])
     }
 
-    pub fn build_ans(&mut self, expr: &Expr, model: &z3::Model) -> Expr<Value> {
+    pub fn build_answer(&mut self, expr: &Expr, model: &z3::Model) -> AnswerExpr {
         let args = &self.arguments;
         let consts = &mut self.z3_consts;
         let mut next_const_idx = 0;
@@ -77,7 +77,7 @@ impl<'ctx> Z3ToExpr<'ctx> {
         )
     }
 
-    pub fn ans_expr_to_z3(&self, expr: &Expr<Value>) -> z3::ast::BV<'ctx> {
+    pub fn ans_expr_to_z3(&self, expr: &AnswerExpr) -> z3::ast::BV<'ctx> {
         expr.to_z3_ans(
             &self.z3,
             |v| self.get_argument(v).unwrap().clone()
