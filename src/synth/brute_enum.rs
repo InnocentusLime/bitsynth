@@ -2,8 +2,6 @@ use crate::expr::{BinopKind, Expr, ExprSkeleton, UnopKind, Variable};
 
 use super::Synthesizer;
 
-pub const DEFAULT_BREADTH_LIMIT: usize = 1_000;
-
 pub struct ExprIdx {
     arg_count: usize,
     limit_reached: bool,
@@ -71,16 +69,16 @@ impl ExprIdx {
 }
 
 pub struct ExprBreadth {
-    breadth_limit: usize,
+    depth_limit: usize,
     skeleton_idx: usize,
     expr_enum: ExprIdx,
     skeletons: Vec<ExprSkeleton>,
 }
 
 impl ExprBreadth {
-    pub fn new(arg_count: usize, breadth_limit: usize) -> Self {
+    pub fn new(arg_count: usize, depth_limit: usize) -> Self {
         let mut res = Self {
-            breadth_limit,
+            depth_limit,
             skeleton_idx: 0,
             expr_enum: ExprIdx::new(arg_count),
             skeletons: vec![Expr::Variable(())],
@@ -94,7 +92,7 @@ impl ExprBreadth {
     // NOTE: if we find a prettier way to do it -- do it asap, because currently
     // resetting stuff is very ugly looking
     pub fn next(&mut self) -> Option<Expr> {
-        if self.skeletons.len() >= self.breadth_limit {
+        if self.skeletons.len() == 0 {
             return None;
         }
 
@@ -129,7 +127,12 @@ impl ExprBreadth {
             .collect();
 
         self.skeletons = new_skeletons;
-        self.expr_enum.reset(&self.skeletons[0]);
+
+        self.skeletons.retain(|x| x.expr_depth() <= self.depth_limit);
+
+        if self.skeletons.len() > 0 {
+            self.expr_enum.reset(&self.skeletons[0]);
+        }
     }
 
     // NOTE: this procedure is more than likely suboptimal
@@ -172,9 +175,9 @@ pub struct BruteEnum {
 }
 
 impl Synthesizer for BruteEnum {
-    fn build(var_count: usize) -> Self {
+    fn build(var_count: usize, depth_limit: usize) -> Self {
         Self {
-            breadth: ExprBreadth::new(var_count, DEFAULT_BREADTH_LIMIT),
+            breadth: ExprBreadth::new(var_count, depth_limit),
         }
     }
 

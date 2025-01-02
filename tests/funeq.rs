@@ -3,6 +3,7 @@ use bitsynth::synth::simple_search::SimpleSearch;
 use bitsynth::{conv::Z3ToExpr, expr::BITS_PER_VAL, search::BithackSearch, synth::Synthesizer};
 use z3::ast::Ast;
 
+pub const EASY_DEPTH_LIMIT: usize = 5;
 pub const EASY_SEARCH_LIMIT: usize = 100_000;
 
 pub struct FuneqChallenge {
@@ -39,7 +40,8 @@ impl FuneqChallenge {
     {
         let mut search = BithackSearch::<S>::new(
             z3,
-            self.args.clone()
+            self.args.clone(),
+            EASY_DEPTH_LIMIT,
         );
         let fun = (self.builder)(z3, search.converter());
 

@@ -30,7 +30,7 @@ impl SimpleSearch {
 }
 
 impl Synthesizer for SimpleSearch {
-    fn build(var_count: usize) -> Self {
+    fn build(var_count: usize, _depth_limit: usize) -> Self {
         Self::new(var_count)
     }
 

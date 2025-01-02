@@ -35,6 +35,7 @@ fn main() {
     let mut search = BithackSearch::<SimpleSearch>::new(
         &ctx,
         vec!["x".to_string()],
+        10,
     );
 
     let r_var = search.oracle().result_var().clone();

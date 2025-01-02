@@ -26,9 +26,10 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     pub fn new(
         z3: &'ctx z3::Context,
         arguments: Vec<String>,
+        depth_limit: usize,
     ) -> Self {
         Self {
-            synth: S::build(arguments.len()),
+            synth: S::build(arguments.len(), depth_limit),
             converter: Z3ToExpr::new(z3, arguments),
             oracle: Oracle::new(z3),
         }

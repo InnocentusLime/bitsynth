@@ -15,7 +15,7 @@ pub struct Example {
 /// be provided with examples to "learn". This allows synthesizers
 /// to speed up the search.
 pub trait Synthesizer {
-    fn build(var_count: usize) -> Self;
+    fn build(var_count: usize, depth_limit: usize) -> Self;
 
     /// Asks the synthesizer to take a new example into account. This is
     /// for potential optimisation of the search, so the synthesizer does not
