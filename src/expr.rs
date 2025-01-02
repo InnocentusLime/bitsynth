@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt, rc::Rc};
 
 pub const BITS_PER_VAL: u32 = 32;
 pub type ExprVal = i32;
@@ -203,6 +203,30 @@ impl AnswerExpr {
             },
             &mut |x| x,
         )
+    }
+}
+
+impl fmt::Display for AnswerExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Expr::Variable(x) => match x {
+                Value::Arg(arg) => write!(f, "{arg}"),
+                Value::Const(c) => write!(f, "{c}"),
+            },
+            Expr::Unop(unop_kind, expr) => match unop_kind {
+                UnopKind::Not => write!(f, "!({expr})"),
+                UnopKind::Negate => write!(f, "-({expr})"),
+            },
+            Expr::Binop(binop_kind, l, r) => match binop_kind {
+                BinopKind::And => write!(f, "({l} & {r})"),
+                BinopKind::Or => write!(f, "({l} | {r})"),
+                BinopKind::Xor => write!(f, "({l} ^ {r})"),
+                BinopKind::Plus => write!(f, "({l} + {r})"),
+                BinopKind::Minus => write!(f, "({l} - {r})"),
+                BinopKind::Shl => write!(f, "({l} << {r})"),
+                BinopKind::ShrA => write!(f, "({l} >> {r})"),
+            },
+        }
     }
 }
 

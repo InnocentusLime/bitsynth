@@ -77,7 +77,7 @@ fn main() {
     }
 
     match perform_search() {
-        Some(ans) => println!("Found: {:?}", ans),
+        Some(ans) => println!("Found: {ans:}"),
         None => println!("No fitting expression found"),
     }
 }
