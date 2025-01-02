@@ -1,5 +1,3 @@
-use std::path::Iter;
-
 use crate::expr::{BinopKind, Expr, ExprSkeleton, UnopKind, Variable};
 
 use super::Synthesizer;
@@ -38,7 +36,7 @@ impl ExprIdx {
 
     pub fn produce(&self, skele: &ExprSkeleton) -> Expr {
         // NOTE: this assert failing is 100% an API misuse
-        assert_eq!(self.hole_buff.len(), skele.count_holes());
+        assert_eq!(self.hole_buff.len(), skele.count_holes(), "You forgot to call reset");
 
         skele.to_expr(|idx| self.digit_to_var(self.hole_buff[idx]))
     }
