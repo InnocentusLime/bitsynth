@@ -18,11 +18,16 @@ struct Cli {
     trace: bool,
     #[arg(short, long)]
     verbose: bool,
+    #[arg(long)]
+    timeout: Option<u64>,
 }
 
-fn perform_search() -> Option<AnswerExpr> {
+fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
     let mut cfg = z3::Config::default();
-    // cfg.set_timeout_msec(300);
+
+    if let Some(timeout) = timeout {
+        cfg.set_timeout_msec(timeout);
+    }
     let ctx = z3::Context::new(&cfg);
 
     let mut search = BithackSearch::<BruteEnum>::new(
@@ -76,7 +81,7 @@ fn main() {
             .init();
     }
 
-    match perform_search() {
+    match perform_search(cli.timeout) {
         Some(ans) => println!("Found: {ans:}"),
         None => println!("No fitting expression found"),
     }
