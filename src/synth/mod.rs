@@ -1,4 +1,5 @@
 pub mod simple_search;
+pub mod brute_enum;
 
 use std::collections::HashMap;
 
