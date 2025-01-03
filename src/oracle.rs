@@ -1,7 +1,7 @@
 use log::debug;
 use z3::ast::Ast;
 
-use crate::expr::BITS_PER_VAL;
+use crate::expr::{ExprVal, BITS_PER_VAL};
 
 pub struct Oracle<'ctx> {
     z3: &'ctx z3::Context,
@@ -60,6 +60,38 @@ impl<'ctx> Oracle<'ctx> {
         self.solver.pop(1);
 
         answer
+    }
+
+    pub fn suitable_value<'a>(
+        &self,
+        z3_args: impl IntoIterator<Item = &'a z3::ast::BV<'ctx>>,
+        z3_arg_values: impl IntoIterator<Item = ExprVal>,
+    ) -> ExprVal
+    where
+        'ctx: 'a,
+    {
+        debug!("Generating a valid value");
+
+        self.solver.push();
+
+        for (arg, val) in z3_args.into_iter().zip(z3_arg_values.into_iter()) {
+            self.solver.assert(&arg._eq(
+                &z3::ast::BV::from_i64(&self.z3, val as i64, BITS_PER_VAL)
+            ));
+        }
+
+        assert!(self.solver.check() == z3::SatResult::Sat);
+
+        let ans = self.solver.get_model()
+            .unwrap()
+            .get_const_interp(&self.result_var)
+            .unwrap()
+            .as_i64()
+            .unwrap() as ExprVal;
+
+        self.solver.pop(1);
+
+        ans
     }
 
     pub fn check_candidate<'a>(

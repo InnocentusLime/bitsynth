@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::expr::{Expr, Variable};
+use crate::expr::{Expr, ExprVal, Variable};
 
 use super::Synthesizer;
 
@@ -37,7 +37,7 @@ impl Synthesizer for SimpleSearch {
         Self::new(var_count)
     }
 
-    fn bad_cand(&mut self, _expr: &Expr) {
+    fn bad_cand(&mut self, _expr: &Expr, _args: Vec<ExprVal>, _val: ExprVal) {
         /* We do not learn. */
     }
 

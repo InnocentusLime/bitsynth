@@ -57,22 +57,29 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
                 answer: self.converter.build_answer(&cand, &model),
                 cand,
             },
+            None if self.should_learn => {
+                SearchStep::IncorrectSample {
+                    is_universally_wrong: false,
+                    cand,
+                }
+            },
             None => {
-                let is_universally_wrong = if self.should_learn {
-                    self.oracle.counterexample(
-                        &z3_cand,
-                        self.converter.z3_consts(),
-                    ).is_some()
-                } else {
-                    false
-                };
+                let counterexample = self.oracle.counterexample(
+                    &z3_cand,
+                    self.converter.z3_consts()
+                );
 
-                if is_universally_wrong {
-                    self.synth.bad_cand(&cand);
+                if let Some(model) = &counterexample {
+                    let args = self.converter.build_counter_example(model);
+                    let val = self.oracle.suitable_value(
+                        self.converter.z3_args().iter(),
+                        args.iter().map(|x| *x),
+                    );
+                    self.synth.bad_cand(&cand, args, val);
                 }
 
                 SearchStep::IncorrectSample {
-                    is_universally_wrong,
+                    is_universally_wrong: counterexample.is_some(),
                     cand,
                 }
             },

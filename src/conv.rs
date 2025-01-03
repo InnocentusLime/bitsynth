@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use log::trace;
 
-use crate::expr::{AnswerExpr, Expr, Value, Variable, BITS_PER_VAL};
+use crate::expr::{AnswerExpr, Expr, ExprVal, Value, Variable, BITS_PER_VAL};
 
 pub struct Z3ToExpr<'ctx> {
     z3: &'ctx z3::Context,
@@ -78,6 +78,13 @@ impl<'ctx> Z3ToExpr<'ctx> {
                 }
             },
         )
+    }
+
+    pub fn build_counter_example(&self, model: &z3::Model) -> Vec<ExprVal> {
+        self.z3_args.iter()
+            .map(|x| model.get_const_interp(x).expect("No val for arg"))
+            .map(|x| x.as_i64().unwrap() as ExprVal)
+            .collect()
     }
 
     pub fn ans_expr_to_z3(&self, expr: &AnswerExpr) -> z3::ast::BV<'ctx> {

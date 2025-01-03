@@ -1,6 +1,6 @@
 use std::{iter::FusedIterator, rc::Rc};
 
-use crate::expr::{BinopKind, Expr, ExprSkeleton, UnopKind, Variable};
+use crate::expr::{BinopKind, Expr, ExprSkeleton, ExprVal, UnopKind, Variable};
 
 use super::Synthesizer;
 
@@ -208,7 +208,7 @@ impl Synthesizer for BruteEnum {
         }
     }
 
-    fn bad_cand(&mut self, _cand: &Expr) {
+    fn bad_cand(&mut self, _expr: &Expr, _args: Vec<ExprVal>, _val: ExprVal) {
         // A brute doesn't learn
     }
 
