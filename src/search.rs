@@ -59,10 +59,10 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
             },
             None => {
                 let is_universally_wrong = if self.should_learn {
-                    self.oracle.has_universal_counterexample(
+                    self.oracle.counterexample(
                         &z3_cand,
                         self.converter.z3_consts(),
-                    )
+                    ).is_some()
                 } else {
                     false
                 };

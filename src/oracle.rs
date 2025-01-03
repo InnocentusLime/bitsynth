@@ -34,14 +34,15 @@ impl<'ctx> Oracle<'ctx> {
         self.constraints.push(constraint);
     }
 
-    pub fn has_universal_counterexample<'a>(
+    pub fn counterexample<'a>(
         &'a self,
         z3_cand: &'a z3::ast::BV<'ctx>,
         z3_consts: impl IntoIterator<Item = &'a z3::ast::BV<'ctx>>,
-    ) -> bool
+    ) -> Option<z3::Model<'ctx>>
     where
         'ctx: 'a,
     {
+        let mut answer = None;
         debug!("Searching for universal counter-example");
 
         let specif = self.counter_specif(&z3_cand, z3_consts);
@@ -49,11 +50,16 @@ impl<'ctx> Oracle<'ctx> {
         self.solver.push();
         self.solver.assert(&specif);
         let z3_verdict = self.solver.check();
-        self.solver.pop(1);
 
         debug!("Z3 counterexample search: {z3_verdict:?}");
 
-        z3_verdict == z3::SatResult::Sat
+        if z3_verdict == z3::SatResult::Sat {
+            answer = Some(self.solver.get_model().expect("Model must exist"));
+        }
+
+        self.solver.pop(1);
+
+        answer
     }
 
     pub fn check_candidate<'a>(
