@@ -20,12 +20,12 @@ impl SimpleSearch {
             arg_cnt,
             last_tried: 0,
             db: vec![
-                Expr::Variable(Variable::Const),
+                Expr::Variable(Variable::UnknownConst),
                 Expr::Variable(Variable::Argument(0)),
                 Expr::Binop(
                     crate::expr::BinopKind::And,
                     Rc::new(Expr::Variable(Variable::Argument(0))),
-                    Rc::new(Expr::Variable(Variable::Const)),
+                    Rc::new(Expr::Variable(Variable::UnknownConst)),
                 )
             ],
          }

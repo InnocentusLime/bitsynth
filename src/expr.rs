@@ -11,7 +11,8 @@ pub enum Value {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Variable {
-    Const,
+    UnknownConst,
+    Const(ExprVal),
     Argument(usize),
 }
 

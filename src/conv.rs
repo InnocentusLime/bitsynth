@@ -63,7 +63,7 @@ impl<'ctx> Z3ToExpr<'ctx> {
                             .map(|(name, _)| name.clone())
                             .map(Value::Arg)
                             .unwrap(),
-                    Variable::Const => {
+                    Variable::UnknownConst => {
                         let c = &consts[next_const_idx];
                         let interp = model.get_const_interp(c).unwrap();
                         let val = interp.as_i64().unwrap() as i32;
@@ -71,6 +71,9 @@ impl<'ctx> Z3ToExpr<'ctx> {
                         next_const_idx += 1;
 
                         Value::Const(val)
+                    },
+                    Variable::Const(i) => {
+                        Value::Const(i)
                     },
                 }
             },
@@ -98,7 +101,7 @@ impl<'ctx> Z3ToExpr<'ctx> {
 
                 match v {
                     Variable::Argument(idx) => args[idx].clone(),
-                    Variable::Const => {
+                    Variable::UnknownConst => {
                         let res = match consts.get(next_const_idx) {
                             Some(x) => x.clone(),
                             None => {
@@ -112,6 +115,9 @@ impl<'ctx> Z3ToExpr<'ctx> {
 
                         res
                     },
+                    Variable::Const(i) => {
+                        z3::ast::BV::from_i64(&self.z3, i as i64, BITS_PER_VAL)
+                    }
                 }
             },
         )

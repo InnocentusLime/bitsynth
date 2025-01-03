@@ -30,7 +30,7 @@ impl ExprIdx {
 
     fn digit_to_var(&self, digit: usize) -> Variable {
         if digit == 0 {
-            Variable::Const
+            Variable::UnknownConst
         } else {
             Variable::Argument(digit - 1)
         }
