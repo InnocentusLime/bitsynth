@@ -32,8 +32,8 @@ impl SimpleSearch {
     }
 }
 
-impl Synthesizer for SimpleSearch {
-    fn build(var_count: usize, _depth_limit: usize) -> Self {
+impl<'ctx> Synthesizer<'ctx> for SimpleSearch {
+    fn build(_z3: &'ctx z3::Context, var_count: usize, _depth_limit: usize) -> Self {
         Self::new(var_count)
     }
 

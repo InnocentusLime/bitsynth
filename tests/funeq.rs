@@ -16,7 +16,7 @@ pub struct FuneqChallenge {
 }
 
 impl FuneqChallenge {
-    pub fn perform_tests<'ctx, S: Synthesizer>(
+    pub fn perform_tests<'ctx, S: Synthesizer<'ctx>>(
         should_learn: bool,
         tests: impl IntoIterator<Item = FuneqChallenge>,
         z3: &'ctx z3::Context,
@@ -45,7 +45,7 @@ impl FuneqChallenge {
         mut tester: O,
     )
     where
-        S: Synthesizer,
+        S: Synthesizer<'ctx>,
         O: FnMut(&z3::ast::BV, &z3::ast::BV) -> bool,
     {
         let mut search = BithackSearch::<S>::new(

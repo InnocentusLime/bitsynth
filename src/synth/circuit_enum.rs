@@ -409,8 +409,8 @@ impl<'ctx> CircuitEnum<'ctx> {
     }
 }
 
-impl<'ctx> Synthesizer for CircuitEnum<'ctx> {
-    fn build(var_count: usize, depth_limit: usize) -> Self {
+impl<'ctx> Synthesizer<'ctx> for CircuitEnum<'ctx> {
+    fn build(z3: &'ctx z3::Context, var_count: usize, depth_limit: usize) -> Self {
         todo!()
     }
 

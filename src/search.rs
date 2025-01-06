@@ -23,7 +23,7 @@ pub struct BithackSearch<'ctx, S> {
     converter: Z3ToExpr<'ctx>,
 }
 
-impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
+impl<'ctx, S: Synthesizer<'ctx>> BithackSearch<'ctx, S> {
     pub fn new(
         should_learn: bool,
         z3: &'ctx z3::Context,
@@ -32,7 +32,7 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     ) -> Self {
         Self {
             should_learn,
-            synth: S::build(arguments.len(), depth_limit),
+            synth: S::build(z3, arguments.len(), depth_limit),
             converter: Z3ToExpr::new(z3, arguments),
             oracle: Oracle::new(z3),
         }

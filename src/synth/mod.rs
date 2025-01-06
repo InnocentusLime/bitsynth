@@ -8,8 +8,8 @@ use crate::expr::{Expr, ExprVal};
 /// new expression candidates, but in addition to that it can also
 /// be provided with examples to "learn". This allows synthesizers
 /// to speed up the search.
-pub trait Synthesizer {
-    fn build(var_count: usize, depth_limit: usize) -> Self;
+pub trait Synthesizer<'ctx> {
+    fn build(z3: &'ctx z3::Context, var_count: usize, depth_limit: usize) -> Self;
 
     /// Reports to the synthesizer, that the produced candidate is
     /// "universally bad". This can be used to reduce the search space.

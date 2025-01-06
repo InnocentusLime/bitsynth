@@ -201,8 +201,8 @@ pub struct BruteEnum {
     breadth: ExprBreadth,
 }
 
-impl Synthesizer for BruteEnum {
-    fn build(var_count: usize, depth_limit: usize) -> Self {
+impl<'ctx> Synthesizer<'ctx> for BruteEnum {
+    fn build(_z3: &'ctx z3::Context, var_count: usize, depth_limit: usize) -> Self {
         Self {
             breadth: ExprBreadth::new(var_count, depth_limit),
         }
