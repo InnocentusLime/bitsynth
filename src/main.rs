@@ -22,9 +22,20 @@ struct Cli {
     verbose: bool,
     #[arg(long)]
     timeout: Option<u64>,
+    #[arg(short, long)]
+    constraint: Vec<String>,
+    #[arg(short, long)]
+    arg: Vec<String>,
 }
 
-fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
+fn perform_search(
+    timeout: Option<u64>,
+    constraint: Vec<String>,
+    arg: Vec<String>,
+) -> Option<AnswerExpr> {
+    info!("Arguments: {:?}", arg);
+    info!("Constraints: {:?}", constraint);
+
     let mut cfg = z3::Config::default();
 
     if let Some(timeout) = timeout {
@@ -35,12 +46,12 @@ fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
     let mut search = BithackSearch::<CircuitEnum>::new(
         true,
         &ctx,
-        vec!["x".to_string()],
+        arg,
         3,
     );
 
-    let r_var = search.oracle().result_var().clone();
-    let x_var = search.converter().get_argument("x").unwrap().clone();
+    search.parse_prompt(&constraint.join("\n"));
+
     // search.add_constraint(
     //     r_var._eq(
     //         &z3::ast::BV::from_i64(&ctx, 0, 32)
@@ -51,20 +62,21 @@ fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
     //        &(x_var * 8i64)
     //     )
     // );
-    search.oracle().add_constraint(
-        x_var.clone().bvsle(
-            &z3::ast::BV::from_i64(&ctx, 0, BITS_PER_VAL)
-        ).implies(
-            &r_var._eq(&-x_var.clone())
-        )
-    );
-    search.oracle().add_constraint(
-        x_var.clone().bvsgt(
-            &z3::ast::BV::from_i64(&ctx, 0, BITS_PER_VAL)
-        ).implies(
-            &r_var._eq(&x_var.clone())
-        )
-    );
+
+    // search.oracle().add_constraint(
+    //     x_var.clone().bvsle(
+    //         &z3::ast::BV::from_i64(&ctx, 0, BITS_PER_VAL)
+    //     ).implies(
+    //         &r_var._eq(&-x_var.clone())
+    //     )
+    // );
+    // search.oracle().add_constraint(
+    //     x_var.clone().bvsgt(
+    //         &z3::ast::BV::from_i64(&ctx, 0, BITS_PER_VAL)
+    //     ).implies(
+    //         &r_var._eq(&x_var.clone())
+    //     )
+    // );
 
     let mut total_explored = 0;
     while let Some(step) = search.step() {
@@ -110,7 +122,7 @@ fn main() {
             .init();
     }
 
-    match perform_search(cli.timeout) {
+    match perform_search(cli.timeout, cli.constraint, cli.arg) {
         Some(ans) => println!("Found: {ans:}"),
         None => println!("No fitting expression found"),
     }

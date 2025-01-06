@@ -38,6 +38,14 @@ impl<'ctx, S: Synthesizer<'ctx>> BithackSearch<'ctx, S> {
         }
     }
 
+    pub fn parse_prompt(
+        &mut self,
+        prompt: &str,
+    ) {
+        let preamble = self.converter.declaration();
+        self.oracle.parse([preamble.as_str(), prompt].join("\n"));
+    }
+
     pub fn converter(&self) -> &Z3ToExpr<'ctx> {
         &self.converter
     }
