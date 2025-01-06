@@ -1,5 +1,6 @@
 use std::{collections::HashMap, f32::consts::E, rc::Rc};
 
+use log::info;
 use z3::{ast::Ast, Solver};
 
 use crate::expr::{BinopKind, Expr, ExprSkeleton, ExprVal, Variable, BITS_PER_VAL};
@@ -177,6 +178,8 @@ impl Library {
             solver.assert(&zero.le(&x.loc));
             solver.assert(&x.loc.lt(&loc_count));
         }
+        solver.assert(&zero.le(&result.loc));
+        solver.assert(&result.loc.lt(&loc_count));
 
         /* Equality constraint */
         let all_connections =
@@ -282,7 +285,9 @@ impl<'ctx> CircuitEnum<'ctx> {
 
         self.solver.push();
         let lib_spec = self.prepare_spec();
-        if self.solver.check() == z3::SatResult::Sat {
+        let check_result = self.solver.check();
+        info!("Z3 syntesizing: {check_result:?}");
+        if check_result == z3::SatResult::Sat {
             model = Some((
                 self.solver.get_model().unwrap(),
                 lib_spec
@@ -478,7 +483,7 @@ impl<'ctx> Synthesizer<'ctx> for CircuitEnum<'ctx> {
     }
 
     fn bad_cand(&mut self, _cand: &Expr, args: Vec<ExprVal>, expected: ExprVal) {
-        self.tests.add_test(args, expected);
+        self.learn(args, expected);
     }
 
     fn next_expr(&mut self) -> Option<Expr> {
