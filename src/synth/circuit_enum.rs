@@ -9,15 +9,45 @@ use super::Synthesizer;
 
 #[derive(Clone, Debug)]
 struct Connection<'ctx> {
+    val_s: &'static str,
+    loc_s: &'static str,
     val: z3::ast::BV<'ctx>,
     loc: z3::ast::Int<'ctx>,
 }
 
-fn new_arg<'ctx>(z3: &'ctx z3::Context) -> Connection<'ctx> {
-    Connection {
-        val: z3::ast::BV::fresh_const(z3, "ca", BITS_PER_VAL),
-        loc: z3::ast::Int::fresh_const(z3, "cal"),
+impl<'ctx> Connection<'ctx> {
+    fn new(
+        z3: &'ctx z3::Context,
+        val_s: &'static str,
+        loc_s: &'static str,
+    ) -> Connection<'ctx> {
+        Self {
+            val_s,
+            loc_s,
+            val: z3::ast::BV::fresh_const(
+                z3,
+                val_s,
+                BITS_PER_VAL
+            ),
+            loc: z3::ast::Int::fresh_const(
+                z3,
+                loc_s
+            ),
+        }
     }
+
+    fn new_case(&self, z3: &'ctx z3::Context) -> Connection<'ctx> {
+        Connection {
+            val_s: self.val_s,
+            loc_s: self.loc_s,
+            val: z3::ast::BV::fresh_const(z3, self.val_s, BITS_PER_VAL),
+            loc: self.loc.clone(),
+        }
+    }
+}
+
+fn new_arg<'ctx>(z3: &'ctx z3::Context) -> Connection<'ctx> {
+    Connection::new(z3, "ca", "cal")
 }
 
 fn new_const<'ctx>(z3: &'ctx z3::Context) -> z3::ast::BV<'ctx> {
@@ -25,24 +55,15 @@ fn new_const<'ctx>(z3: &'ctx z3::Context) -> z3::ast::BV<'ctx> {
 }
 
 fn new_input<'ctx>(z3: &'ctx z3::Context) -> Connection<'ctx> {
-    Connection {
-        val: z3::ast::BV::fresh_const(z3, "ci", BITS_PER_VAL),
-        loc: z3::ast::Int::fresh_const(z3, "cil"),
-    }
+    Connection::new(z3, "ci", "cil")
 }
 
 fn new_output<'ctx>(z3: &'ctx z3::Context) -> Connection<'ctx> {
-    Connection {
-        val: z3::ast::BV::fresh_const(z3, "co", BITS_PER_VAL),
-        loc: z3::ast::Int::fresh_const(z3, "col"),
-    }
+    Connection::new(z3, "co", "col")
 }
 
 fn new_result<'ctx>(z3: &'ctx z3::Context) -> Connection<'ctx> {
-    Connection {
-        val: z3::ast::BV::fresh_const(z3, "cr", BITS_PER_VAL),
-        loc: z3::ast::Int::fresh_const(z3, "crl"),
-    }
+    Connection::new(z3, "cr", "crl")
 }
 
 struct ComponentTemplate(Expr);
@@ -100,6 +121,14 @@ impl<'ctx> Component<'ctx> {
         self.inputs.iter()
             .chain(std::iter::once(&self.output))
     }
+
+    fn new_case(&self, z3: &'ctx z3::Context) -> Component<'ctx> {
+        Self {
+            constants: self.constants.clone(),
+            inputs: self.inputs.iter().map(|x| x.new_case(z3)).collect(),
+            output: self.output.new_case(z3),
+        }
+    }
 }
 
 struct LibrarySpec<'ctx> {
@@ -118,7 +147,67 @@ impl Library {
         &self.template[self.components[comp_idx]]
     }
 
-    fn spec<'ctx>(
+    fn func_spec<'ctx>(
+        &self,
+        z3: &'ctx z3::Context,
+        solver: &z3::Solver<'ctx>,
+        lib_spec: &LibrarySpec<'ctx>,
+        values: &[ExprVal],
+        expected: ExprVal,
+    ) {
+        let args = lib_spec.args.iter()
+            .map(|x| x.new_case(z3))
+            .collect::<Vec<_>>();
+        let result = lib_spec.result.new_case(z3);
+        let components = lib_spec.components.iter()
+            .map(|x| x.new_case(z3))
+            .collect::<Vec<_>>();
+        for component_idx in &self.components {
+            let component = &components[*component_idx];
+            let template = &self.template[*component_idx];
+            solver.assert(&template.spec(
+                z3,
+                &component.output,
+                &component.inputs,
+                &component.constants,
+            ));
+        }
+
+        /* Equality constraint */
+        let all_connections =
+            components.iter()
+                .flat_map(|x| x.all_connections())
+                .chain(&args);
+        for (i_x, x) in all_connections.into_iter().enumerate() {
+            let all_connections =
+                components.iter()
+                    .flat_map(|x| x.all_connections())
+                    .chain(&args);
+            for y in all_connections.skip(i_x + 1) {
+                solver.assert(
+                    &(x.loc._eq(&y.loc))
+                        .implies(&x.val._eq(&y.val))
+                );
+            }
+        }
+
+        /* The test */
+        let expected = z3::ast::BV::from_i64(
+            z3,
+            expected as i64,
+            BITS_PER_VAL
+        );
+        solver.assert(&result.val._eq(&expected));
+        for (arg, conn) in values.iter().zip(args) {
+            solver.assert(&conn.val._eq(&z3::ast::BV::from_i64(
+                z3,
+                *arg as i64,
+                BITS_PER_VAL
+            )));
+        }
+    }
+
+    fn wf_spec<'ctx>(
         &self,
         arg_count: usize,
         z3: &'ctx z3::Context,
@@ -135,7 +224,7 @@ impl Library {
 
         let components = Vec::<Component<'ctx>>::new();
 
-        /* Lib and acyc constraint */
+        /* Acyc constraint */
         for component in &self.components {
             let template = &self.template[*component];
             let component = Component {
@@ -148,17 +237,11 @@ impl Library {
                     .collect(),
             };
 
-            solver.assert(&template.spec(
-                z3,
-                &component.output,
-                &component.inputs,
-                &component.constants,
-            ));
-
             for inp in &component.inputs {
                 solver.assert(&inp.loc.lt(&component.output.loc));
             }
         }
+
 
         /* Consistency constraint */
         for (i_x, x) in components.iter().enumerate() {
@@ -190,24 +273,6 @@ impl Library {
         solver.assert(&zero.le(&result.loc));
         solver.assert(&result.loc.lt(&loc_count));
 
-        /* Equality constraint */
-        let all_connections =
-            components.iter()
-                .flat_map(|x| x.all_connections())
-                .chain(&args);
-        for (i_x, x) in all_connections.into_iter().enumerate() {
-            let all_connections =
-                components.iter()
-                    .flat_map(|x| x.all_connections())
-                    .chain(&args);
-            for y in all_connections.skip(i_x + 1) {
-                solver.assert(
-                    &(x.loc._eq(&y.loc))
-                        .implies(&x.val._eq(&y.val))
-                );
-            }
-        }
-
         LibrarySpec {
             args,
             components,
@@ -234,35 +299,18 @@ impl TestStorage {
     fn spec<'ctx>(
         &self,
         z3: &'ctx z3::Context,
-        args: &[Connection<'ctx>],
-        result: &Connection<'ctx>,
+        library: &Library,
+        lib_spec: &LibrarySpec<'ctx>,
         solver: &z3::Solver,
     ) {
-        let mut ast_buff = Vec::with_capacity(args.len());
-
-        for (inp, res) in &self.tests {
-            debug_assert_eq!(inp.len(), args.len());
-
-            ast_buff.clear();
-            ast_buff.extend(
-                inp.iter().zip(args)
-                    .map(|(arg, conn)| conn.val._eq(&z3::ast::BV::from_i64(
-                        z3,
-                        *arg as i64,
-                        BITS_PER_VAL
-                    )))
-            );
-
-            let ref_buff = ast_buff.iter().collect::<Vec<_>>();
-            let expected = z3::ast::BV::from_i64(
+        for (values, expected) in &self.tests {
+            library.func_spec(
                 z3,
-                *res as i64,
-                BITS_PER_VAL
+                solver,
+                lib_spec,
+                values,
+                *expected,
             );
-            let cond = z3::ast::Bool::and(z3, &ref_buff)
-                .implies(&result.val._eq(&expected));
-
-            solver.assert(&cond);
         }
     }
 }
@@ -277,7 +325,7 @@ pub struct CircuitEnum<'ctx> {
     arg_count: usize,
     solver: z3::Solver<'ctx>,
     z3: &'ctx z3::Context,
-    lib: Library,
+    library: Library,
     tests: TestStorage,
 }
 
@@ -312,7 +360,7 @@ impl<'ctx> CircuitEnum<'ctx> {
     }
 
     fn prepare_spec(&self) -> LibrarySpec<'ctx> {
-        let lib_spec = self.lib.spec(
+        let lib_spec = self.library.wf_spec(
             self.arg_count,
             self.z3,
             &self.solver,
@@ -320,8 +368,8 @@ impl<'ctx> CircuitEnum<'ctx> {
 
         self.tests.spec(
             self.z3,
-            &lib_spec.args,
-            &lib_spec.result,
+            &self.library,
+            &lib_spec,
             &self.solver,
         );
 
@@ -389,7 +437,7 @@ impl<'ctx> CircuitEnum<'ctx> {
         };
 
         let mut const_idx = 0;
-        let template_idx = self.lib.template_for(comp_idx);
+        let template_idx = self.library.template_for(comp_idx);
         let component = &lib_spec.components[comp_idx];
 
         template_idx.0.walk_expr(
@@ -490,7 +538,7 @@ impl<'ctx> Synthesizer<'ctx> for CircuitEnum<'ctx> {
             arg_count: var_count,
             solver: z3::Solver::new(z3),
             z3,
-            lib: default_lib(),
+            library: default_lib(),
             tests: TestStorage::new(),
         }
     }
