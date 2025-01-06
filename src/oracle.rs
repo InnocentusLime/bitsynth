@@ -1,4 +1,4 @@
-use log::debug;
+use log::{debug, info};
 use z3::ast::Ast;
 
 use crate::expr::{ExprVal, BITS_PER_VAL};
@@ -32,6 +32,29 @@ impl<'ctx> Oracle<'ctx> {
 
     pub fn add_constraint(&mut self, constraint: z3::ast::Bool<'ctx>) {
         self.constraints.push(constraint);
+    }
+
+    pub fn parse(&mut self, str: String) {
+        // This is SHIT. Don't do this kids!
+        info!("Going to parse: {str}");
+
+        self.solver.reset();
+        self.solver.from_string(str.as_bytes());
+        self.constraints = self.solver.get_assertions().into_iter()
+            .map(|x| unsafe {
+                z3::ast::Bool::wrap(
+                    &self.z3,
+                    x.get_z3_ast()
+                )
+            })
+            .collect();
+
+        // This is even dirtier than the guy before it!
+        assert!(!self.constraints.is_empty(), "Syntax error");
+
+        self.solver.reset();
+
+        info!("Input constraints: {:?}", self.constraints);
     }
 
     pub fn counterexample<'a>(

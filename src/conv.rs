@@ -41,6 +41,15 @@ impl<'ctx> Z3ToExpr<'ctx> {
         &self.z3_consts
     }
 
+    pub fn declaration(&self) -> String {
+        self.arguments.keys()
+            .map(|x| x.as_str())
+            .chain(std::iter::once("res"))
+            .map(|x| format!("(declare-const {x:} (_ BitVec {BITS_PER_VAL:}))"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
     pub fn get_argument(&self, x: &str) -> Option<&z3::ast::BV<'ctx>> {
         let id = self.arguments.get(x)?;
 

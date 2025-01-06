@@ -354,15 +354,18 @@ pub struct CircuitEnum<'ctx> {
 }
 
 impl<'ctx> CircuitEnum<'ctx> {
-    fn synth_expr(&self) -> Expr {
-        let (model, lib_spec) = self.synth_circuit()
-            .expect("Can't handle lack of model");
+    fn synth_expr(&self) -> Option<Expr> {
+        let Some((model, lib_spec)) = self.synth_circuit()
+            else {
+                info!("I have failed");
+                return None;
+            };
 
         let e = self.circuit_model_to_expr(&lib_spec, &model);
 
         info!("Submitted: {e:?}");
 
-        e
+        Some(e)
     }
 
     fn synth_circuit(&self) -> Option<(z3::Model<'ctx>, LibrarySpec<'ctx>)> {
@@ -576,6 +579,6 @@ impl<'ctx> Synthesizer<'ctx> for CircuitEnum<'ctx> {
     }
 
     fn next_expr(&mut self) -> Option<Expr> {
-        Some(self.synth_expr())
+        self.synth_expr()
     }
 }
