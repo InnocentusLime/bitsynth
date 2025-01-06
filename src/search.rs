@@ -57,7 +57,7 @@ impl<'ctx, S: Synthesizer<'ctx>> BithackSearch<'ctx, S> {
                 answer: self.converter.build_answer(&cand, &model),
                 cand,
             },
-            None if self.should_learn => {
+            None if !self.should_learn => {
                 SearchStep::IncorrectSample {
                     is_universally_wrong: false,
                     cand,
