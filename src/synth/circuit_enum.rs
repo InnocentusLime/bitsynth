@@ -162,9 +162,8 @@ impl Library {
         let components = lib_spec.components.iter()
             .map(|x| x.new_case(z3))
             .collect::<Vec<_>>();
-        for component_idx in &self.components {
-            let component = &components[*component_idx];
-            let template = &self.template[*component_idx];
+        for (template_idx, component) in self.components.iter().zip(&components) {
+            let template = &self.template[*template_idx];
             solver.assert(&template.spec(
                 z3,
                 &component.output,
