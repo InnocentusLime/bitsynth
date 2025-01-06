@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use log::trace;
 
-use crate::expr::{AnswerExpr, Expr, Value, Variable, BITS_PER_VAL};
+use crate::expr::{AnswerExpr, Expr, ExprVal, Value, Variable, BITS_PER_VAL};
 
 pub struct Z3ToExpr<'ctx> {
     z3: &'ctx z3::Context,
@@ -63,7 +63,7 @@ impl<'ctx> Z3ToExpr<'ctx> {
                             .map(|(name, _)| name.clone())
                             .map(Value::Arg)
                             .unwrap(),
-                    Variable::Const => {
+                    Variable::UnknownConst => {
                         let c = &consts[next_const_idx];
                         let interp = model.get_const_interp(c).unwrap();
                         let val = interp.as_i64().unwrap() as i32;
@@ -72,9 +72,19 @@ impl<'ctx> Z3ToExpr<'ctx> {
 
                         Value::Const(val)
                     },
+                    Variable::Const(i) => {
+                        Value::Const(i)
+                    },
                 }
             },
         )
+    }
+
+    pub fn build_counter_example(&self, model: &z3::Model) -> Vec<ExprVal> {
+        self.z3_args.iter()
+            .map(|x| model.get_const_interp(x).expect("No val for arg"))
+            .map(|x| x.as_i64().unwrap() as ExprVal)
+            .collect()
     }
 
     pub fn ans_expr_to_z3(&self, expr: &AnswerExpr) -> z3::ast::BV<'ctx> {
@@ -94,26 +104,20 @@ impl<'ctx> Z3ToExpr<'ctx> {
         expr.to_z3(
             &self.z3,
             |ctx, v| {
-                trace!("Var: {v:?}");
-
-                match v {
-                    Variable::Argument(idx) => args[idx].clone(),
-                    Variable::Const => {
-                        let res = match consts.get(next_const_idx) {
-                            Some(x) => x.clone(),
-                            None => {
-                                let c = Self::new_z3_const(ctx, next_const_idx);
-                                consts.push(c.clone());
-                                c
-                            },
-                        };
-
-                        next_const_idx += 1;
-
-                        res
+                let res = match consts.get(next_const_idx) {
+                    Some(x) => x.clone(),
+                    None => {
+                        let c = Self::new_z3_const(ctx, next_const_idx);
+                        consts.push(c.clone());
+                        c
                     },
-                }
+                };
+
+                next_const_idx += 1;
+
+                res
             },
+            |_ctx, idx| args[idx].clone(),
         )
     }
 

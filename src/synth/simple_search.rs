@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::expr::{Expr, Variable};
+use crate::expr::{Expr, ExprVal, Variable};
 
 use super::Synthesizer;
 
@@ -20,24 +20,24 @@ impl SimpleSearch {
             arg_cnt,
             last_tried: 0,
             db: vec![
-                Expr::Variable(Variable::Const),
+                Expr::Variable(Variable::UnknownConst),
                 Expr::Variable(Variable::Argument(0)),
                 Expr::Binop(
                     crate::expr::BinopKind::And,
                     Rc::new(Expr::Variable(Variable::Argument(0))),
-                    Rc::new(Expr::Variable(Variable::Const)),
+                    Rc::new(Expr::Variable(Variable::UnknownConst)),
                 )
             ],
          }
     }
 }
 
-impl Synthesizer for SimpleSearch {
-    fn build(var_count: usize, _depth_limit: usize) -> Self {
+impl<'ctx> Synthesizer<'ctx> for SimpleSearch {
+    fn build(_z3: &'ctx z3::Context, var_count: usize, _depth_limit: usize) -> Self {
         Self::new(var_count)
     }
 
-    fn bad_cand(&mut self, _expr: &Expr) {
+    fn bad_cand(&mut self, _expr: &Expr, _args: Vec<ExprVal>, _val: ExprVal) {
         /* We do not learn. */
     }
 

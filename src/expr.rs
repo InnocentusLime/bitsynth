@@ -11,7 +11,8 @@ pub enum Value {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Variable {
-    Const,
+    UnknownConst,
+    Const(ExprVal),
     Argument(usize),
 }
 
@@ -127,16 +128,29 @@ impl Expr {
         )
     }
 
-    pub fn to_z3<'ctx, V>(
+    pub fn to_z3<'ctx, A, C>(
         &self,
         ctx: &'ctx z3::Context,
-        mut var_map: V,
+        mut const_map: C,
+        mut arg_map: A,
     ) -> z3::ast::BV<'ctx>
     where
-        V: FnMut(&'ctx z3::Context, Variable) -> z3::ast::BV<'ctx>,
+        C: FnMut(&'ctx z3::Context, usize) -> z3::ast::BV<'ctx>,
+        A: FnMut(&'ctx z3::Context, usize) -> z3::ast::BV<'ctx>,
     {
+        let mut const_idx = 0;
+
         self.walk_expr(
-            &mut move |v| var_map(ctx, *v),
+            &mut move |v| match v {
+                Variable::UnknownConst => {
+                    let res = const_map(ctx, const_idx);
+                    const_idx += 1;
+
+                    res
+                },
+                Variable::Const(x) => z3::ast::BV::from_i64(ctx, *x as i64, BITS_PER_VAL),
+                Variable::Argument(x) => arg_map(ctx, *x),
+            },
             &mut |unop_kind, e: z3::ast::BV<'ctx>| match unop_kind {
                 UnopKind::Not => !e,
                 UnopKind::Negate => -e,

@@ -1,5 +1,5 @@
 
-use log::debug;
+use log::{debug, info};
 
 use crate::{expr::{Expr, Value}, oracle::Oracle, synth::Synthesizer};
 use crate::conv::*;
@@ -23,7 +23,7 @@ pub struct BithackSearch<'ctx, S> {
     converter: Z3ToExpr<'ctx>,
 }
 
-impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
+impl<'ctx, S: Synthesizer<'ctx>> BithackSearch<'ctx, S> {
     pub fn new(
         should_learn: bool,
         z3: &'ctx z3::Context,
@@ -32,7 +32,7 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
     ) -> Self {
         Self {
             should_learn,
-            synth: S::build(arguments.len(), depth_limit),
+            synth: S::build(z3, arguments.len(), depth_limit),
             converter: Z3ToExpr::new(z3, arguments),
             oracle: Oracle::new(z3),
         }
@@ -57,22 +57,30 @@ impl<'ctx, S: Synthesizer> BithackSearch<'ctx, S> {
                 answer: self.converter.build_answer(&cand, &model),
                 cand,
             },
+            None if !self.should_learn => {
+                SearchStep::IncorrectSample {
+                    is_universally_wrong: false,
+                    cand,
+                }
+            },
             None => {
-                let is_universally_wrong = if self.should_learn {
-                    self.oracle.has_universal_counterexample(
-                        &z3_cand,
-                        self.converter.z3_consts(),
-                    )
-                } else {
-                    false
-                };
+                let counterexample = self.oracle.counterexample(
+                    &z3_cand,
+                    self.converter.z3_consts()
+                );
 
-                if is_universally_wrong {
-                    self.synth.bad_cand(&cand);
+                if let Some(model) = &counterexample {
+                    let args = self.converter.build_counter_example(model);
+                    let val = self.oracle.suitable_value(
+                        self.converter.z3_args().iter(),
+                        args.iter().map(|x| *x),
+                    );
+                    info!("Counter-example: {args:?} -> {val}");
+                    self.synth.bad_cand(&cand, args, val);
                 }
 
                 SearchStep::IncorrectSample {
-                    is_universally_wrong,
+                    is_universally_wrong: counterexample.is_some(),
                     cand,
                 }
             },

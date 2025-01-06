@@ -1,6 +1,6 @@
 use std::{iter::FusedIterator, rc::Rc};
 
-use crate::expr::{BinopKind, Expr, ExprSkeleton, UnopKind, Variable};
+use crate::expr::{BinopKind, Expr, ExprSkeleton, ExprVal, UnopKind, Variable};
 
 use super::Synthesizer;
 
@@ -30,7 +30,7 @@ impl ExprIdx {
 
     fn digit_to_var(&self, digit: usize) -> Variable {
         if digit == 0 {
-            Variable::Const
+            Variable::UnknownConst
         } else {
             Variable::Argument(digit - 1)
         }
@@ -201,14 +201,14 @@ pub struct BruteEnum {
     breadth: ExprBreadth,
 }
 
-impl Synthesizer for BruteEnum {
-    fn build(var_count: usize, depth_limit: usize) -> Self {
+impl<'ctx> Synthesizer<'ctx> for BruteEnum {
+    fn build(_z3: &'ctx z3::Context, var_count: usize, depth_limit: usize) -> Self {
         Self {
             breadth: ExprBreadth::new(var_count, depth_limit),
         }
     }
 
-    fn bad_cand(&mut self, _cand: &Expr) {
+    fn bad_cand(&mut self, _expr: &Expr, _args: Vec<ExprVal>, _val: ExprVal) {
         // A brute doesn't learn
     }
 
