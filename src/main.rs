@@ -33,7 +33,7 @@ fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
     let ctx = z3::Context::new(&cfg);
 
     let mut search = BithackSearch::<CircuitEnum>::new(
-        false,
+        true,
         &ctx,
         vec!["x".to_string()],
         3,
