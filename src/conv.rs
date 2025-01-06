@@ -104,29 +104,20 @@ impl<'ctx> Z3ToExpr<'ctx> {
         expr.to_z3(
             &self.z3,
             |ctx, v| {
-                trace!("Var: {v:?}");
-
-                match v {
-                    Variable::Argument(idx) => args[idx].clone(),
-                    Variable::UnknownConst => {
-                        let res = match consts.get(next_const_idx) {
-                            Some(x) => x.clone(),
-                            None => {
-                                let c = Self::new_z3_const(ctx, next_const_idx);
-                                consts.push(c.clone());
-                                c
-                            },
-                        };
-
-                        next_const_idx += 1;
-
-                        res
+                let res = match consts.get(next_const_idx) {
+                    Some(x) => x.clone(),
+                    None => {
+                        let c = Self::new_z3_const(ctx, next_const_idx);
+                        consts.push(c.clone());
+                        c
                     },
-                    Variable::Const(i) => {
-                        z3::ast::BV::from_i64(&self.z3, i as i64, BITS_PER_VAL)
-                    }
-                }
+                };
+
+                next_const_idx += 1;
+
+                res
             },
+            |_ctx, idx| args[idx].clone(),
         )
     }
 
