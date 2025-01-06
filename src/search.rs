@@ -1,5 +1,5 @@
 
-use log::debug;
+use log::{debug, info};
 
 use crate::{expr::{Expr, Value}, oracle::Oracle, synth::Synthesizer};
 use crate::conv::*;
@@ -75,6 +75,7 @@ impl<'ctx, S: Synthesizer<'ctx>> BithackSearch<'ctx, S> {
                         self.converter.z3_args().iter(),
                         args.iter().map(|x| *x),
                     );
+                    info!("Counter-example: {args:?} -> {val}");
                     self.synth.bad_cand(&cand, args, val);
                 }
 
