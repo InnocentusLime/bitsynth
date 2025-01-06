@@ -48,6 +48,10 @@ impl<'ctx> Oracle<'ctx> {
                 )
             })
             .collect();
+
+        // This is even dirtier than the guy before it!
+        assert!(!self.constraints.is_empty(), "Syntax error");
+
         self.solver.reset();
 
         info!("Input constraints: {:?}", self.constraints);
