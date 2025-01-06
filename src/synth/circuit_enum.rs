@@ -221,7 +221,7 @@ impl Library {
         let loc_count = z3::ast::Int::from_u64(&z3, loc_count as u64);
         let arg_count = z3::ast::Int::from_u64(&z3, arg_count as u64);
 
-        let components = Vec::<Component<'ctx>>::new();
+        let mut components = Vec::<Component<'ctx>>::new();
 
         /* Acyc constraint */
         for component in &self.components {
@@ -239,6 +239,8 @@ impl Library {
             for inp in &component.inputs {
                 solver.assert(&inp.loc.lt(&component.output.loc));
             }
+
+            components.push(component);
         }
 
 
