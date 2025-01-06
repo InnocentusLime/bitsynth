@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32::consts::E, rc::Rc};
+use std::{collections::HashMap, f32::consts::E, ops::Deref, rc::Rc};
 
 use log::info;
 use z3::{ast::Ast, Solver};
@@ -69,6 +69,16 @@ fn new_result<'ctx>(z3: &'ctx z3::Context) -> Connection<'ctx> {
 struct ComponentTemplate(Expr);
 
 impl ComponentTemplate {
+    fn is_shr_const(&self) -> bool {
+        match &self.0 {
+            Expr::Binop(BinopKind::ShrA, l, r) => match (l.deref(), r.deref()) {
+                (Expr::Variable(Variable::Argument(_)), Expr::Variable(Variable::UnknownConst)) => true,
+                _ => false,
+            }
+            _ => false,
+        }
+    }
+
     fn spec<'ctx>(
         &self,
         z3: &'ctx z3::Context,
@@ -81,6 +91,17 @@ impl ComponentTemplate {
             |_, idx| constants[idx].clone(),
             |_, idx| inputs[idx].val.clone(),
         );
+
+        if self.is_shr_const() {
+            let top = z3::ast::BV::from_i64(&z3, 32, BITS_PER_VAL);
+            let bot = z3::ast::BV::from_i64(&z3, 0, BITS_PER_VAL);
+
+            return z3::ast::Bool::and(z3, &[
+                &constants[0].bvslt(&top),
+                &constants[0].bvsgt(&bot),
+                &output.val._eq(&expr),
+            ]);
+        }
 
         output.val._eq(&expr)
     }
@@ -176,12 +197,14 @@ impl Library {
         let all_connections =
             components.iter()
                 .flat_map(|x| x.all_connections())
-                .chain(&args);
+                .chain(&args)
+                .chain(std::iter::once(&result));
         for (i_x, x) in all_connections.into_iter().enumerate() {
             let all_connections =
                 components.iter()
                     .flat_map(|x| x.all_connections())
-                    .chain(&args);
+                    .chain(&args)
+                    .chain(std::iter::once(&result));
             for y in all_connections.skip(i_x + 1) {
                 solver.assert(
                     &(x.loc._eq(&y.loc))
@@ -412,6 +435,9 @@ impl<'ctx> CircuitEnum<'ctx> {
             component_idx[loc] = ComponentIdx::Argument(idx);
         }
 
+        info!("start: {start_loc_idx:}");
+        info!("assign {component_idx:?}");
+
         self.build_expr_from_model_rec(
             start_loc_idx,
             &component_idx,
@@ -524,11 +550,12 @@ fn default_lib() -> Library {
     Library {
         template,
         components: vec![
-            0, 0, 0,
-            1, 1, 1,
-            2, 2, 2,
-            3, 3, 3,
-            4, 5, 6,
+            2, 3, 6, 6,
+            // 0, 0, 0,
+            // 1, 1, 1,
+            // 2, 2, 2,
+            // 3, 3, 3,
+            // 4, 5, 6,
         ],
     }
 }
