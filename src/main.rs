@@ -1,8 +1,7 @@
-use expr::{AnswerExpr, BITS_PER_VAL};
+use expr::AnswerExpr;
 use log::info;
 use search::BithackSearch;
 use synth::{brute_enum::BruteEnum, circuit_enum::CircuitEnum, simple_search::SimpleSearch};
-use z3::ast::Ast;
 
 mod search;
 mod synth;
@@ -51,32 +50,6 @@ fn perform_search(
     );
 
     search.parse_prompt(&constraint.join("\n"));
-
-    // search.add_constraint(
-    //     r_var._eq(
-    //         &z3::ast::BV::from_i64(&ctx, 0, 32)
-    //     )
-    // );
-    // search.oracle().add_constraint(
-    //     r_var._eq(
-    //        &(x_var * 8i64)
-    //     )
-    // );
-
-    // search.oracle().add_constraint(
-    //     x_var.clone().bvsle(
-    //         &z3::ast::BV::from_i64(&ctx, 0, BITS_PER_VAL)
-    //     ).implies(
-    //         &r_var._eq(&-x_var.clone())
-    //     )
-    // );
-    // search.oracle().add_constraint(
-    //     x_var.clone().bvsgt(
-    //         &z3::ast::BV::from_i64(&ctx, 0, BITS_PER_VAL)
-    //     ).implies(
-    //         &r_var._eq(&x_var.clone())
-    //     )
-    // );
 
     let mut total_explored = 0;
     while let Some(step) = search.step() {
