@@ -1,9 +1,9 @@
-use std::{collections::HashMap, f32::consts::E, ops::Deref, rc::Rc};
+use std::{ops::Deref, rc::Rc};
 
 use log::info;
-use z3::{ast::Ast, Solver};
+use z3::ast::Ast;
 
-use crate::expr::{BinopKind, Expr, ExprSkeleton, ExprVal, Variable, BITS_PER_VAL};
+use crate::expr::{BinopKind, Expr, ExprVal, Variable, BITS_PER_VAL};
 
 use super::Synthesizer;
 
