@@ -74,6 +74,9 @@ impl<'ctx> Oracle<'ctx> {
 
         self.solver.push();
 
+        self.solver.assert(&z3::ast::Bool::and(&self.z3,
+            self.constraints.iter().collect::<Vec<_>>().as_slice()
+        ));
         for (arg, val) in z3_args.into_iter().zip(z3_arg_values.into_iter()) {
             self.solver.assert(&arg._eq(
                 &z3::ast::BV::from_i64(&self.z3, val as i64, BITS_PER_VAL)
