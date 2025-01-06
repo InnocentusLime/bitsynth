@@ -286,7 +286,11 @@ impl<'ctx> CircuitEnum<'ctx> {
         let (model, lib_spec) = self.synth_circuit()
             .expect("Can't handle lack of model");
 
-        self.circuit_model_to_expr(&lib_spec, &model)
+        let e = self.circuit_model_to_expr(&lib_spec, &model);
+
+        info!("Submitted: {e:?}");
+
+        e
     }
 
     fn synth_circuit(&self) -> Option<(z3::Model<'ctx>, LibrarySpec<'ctx>)> {
