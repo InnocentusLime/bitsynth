@@ -168,6 +168,11 @@ impl Library {
                 solver.assert(&!x.loc._eq(&y.loc));
             }
         }
+        for (i_x, x) in args.iter().enumerate() {
+            for y in args.iter().skip(i_x + 1) {
+                solver.assert(&!x.loc._eq(&y.loc));
+            }
+        }
 
         /* Domain constraints */
         for x in components.iter().map(|x| &x.output) {
@@ -177,6 +182,10 @@ impl Library {
         for x in components.iter().flat_map(|x| &x.inputs) {
             solver.assert(&zero.le(&x.loc));
             solver.assert(&x.loc.lt(&loc_count));
+        }
+        for x in args.iter() {
+            solver.assert(&zero.le(&x.loc));
+            solver.assert(&x.loc.lt(&arg_count));
         }
         solver.assert(&zero.le(&result.loc));
         solver.assert(&result.loc.lt(&loc_count));
