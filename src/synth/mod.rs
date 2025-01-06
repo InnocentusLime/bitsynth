@@ -1,6 +1,6 @@
 pub mod simple_search;
 pub mod brute_enum;
-
+pub mod circuit_enum;
 
 use crate::expr::{Expr, ExprVal};
 
