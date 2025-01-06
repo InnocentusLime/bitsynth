@@ -2,7 +2,7 @@ use std::{collections::HashMap, f32::consts::E, rc::Rc};
 
 use z3::{ast::Ast, Solver};
 
-use crate::expr::{Expr, ExprSkeleton, ExprVal, Variable, BITS_PER_VAL};
+use crate::expr::{BinopKind, Expr, ExprSkeleton, ExprVal, Variable, BITS_PER_VAL};
 
 use super::Synthesizer;
 
@@ -209,6 +209,12 @@ struct TestStorage {
 }
 
 impl TestStorage {
+    fn new() -> Self {
+        Self {
+            tests: Vec::new(),
+        }
+    }
+
     fn add_test(&mut self, args: Vec<ExprVal>, expected: ExprVal) {
         self.tests.push((args, expected))
     }
@@ -409,9 +415,66 @@ impl<'ctx> CircuitEnum<'ctx> {
     }
 }
 
+fn default_lib() -> Library {
+    let template = vec![
+        ComponentTemplate(Expr::Binop(
+            BinopKind::And,
+            Rc::new(Expr::Variable(Variable::Argument(0))),
+            Rc::new(Expr::Variable(Variable::Argument(1))),
+        )),
+        ComponentTemplate(Expr::Binop(
+            BinopKind::Or,
+            Rc::new(Expr::Variable(Variable::Argument(0))),
+            Rc::new(Expr::Variable(Variable::Argument(1))),
+        )),
+        ComponentTemplate(Expr::Binop(
+            BinopKind::Xor,
+            Rc::new(Expr::Variable(Variable::Argument(0))),
+            Rc::new(Expr::Variable(Variable::Argument(1))),
+        )),
+        ComponentTemplate(Expr::Binop(
+            BinopKind::Minus,
+            Rc::new(Expr::Variable(Variable::Argument(0))),
+            Rc::new(Expr::Variable(Variable::Argument(1))),
+        )),
+        ComponentTemplate(Expr::Binop(
+            BinopKind::Minus,
+            Rc::new(Expr::Variable(Variable::Argument(0))),
+            Rc::new(Expr::Variable(Variable::Const(1))),
+        )),
+        ComponentTemplate(Expr::Binop(
+            BinopKind::Plus,
+            Rc::new(Expr::Variable(Variable::Argument(0))),
+            Rc::new(Expr::Variable(Variable::Const(1))),
+        )),
+        ComponentTemplate(Expr::Binop(
+            BinopKind::ShrA,
+            Rc::new(Expr::Variable(Variable::Argument(0))),
+            Rc::new(Expr::Variable(Variable::UnknownConst)),
+        )),
+    ];
+
+    Library {
+        template,
+        components: vec![
+            0, 0, 0,
+            1, 1, 1,
+            2, 2, 2,
+            3, 3, 3,
+            4, 5, 6,
+        ],
+    }
+}
+
 impl<'ctx> Synthesizer<'ctx> for CircuitEnum<'ctx> {
-    fn build(z3: &'ctx z3::Context, var_count: usize, depth_limit: usize) -> Self {
-        todo!()
+    fn build(z3: &'ctx z3::Context, var_count: usize, _depth_limit: usize) -> Self {
+        Self {
+            arg_count: var_count,
+            solver: z3::Solver::new(z3),
+            z3,
+            lib: default_lib(),
+            tests: TestStorage::new(),
+        }
     }
 
     fn bad_cand(&mut self, _cand: &Expr, args: Vec<ExprVal>, expected: ExprVal) {
