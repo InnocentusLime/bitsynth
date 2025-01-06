@@ -1,7 +1,7 @@
 use expr::{AnswerExpr, BITS_PER_VAL};
 use log::info;
 use search::BithackSearch;
-use synth::{brute_enum::BruteEnum, simple_search::SimpleSearch};
+use synth::{brute_enum::BruteEnum, circuit_enum::CircuitEnum, simple_search::SimpleSearch};
 use z3::ast::Ast;
 
 mod search;
@@ -32,7 +32,7 @@ fn perform_search(timeout: Option<u64>) -> Option<AnswerExpr> {
     }
     let ctx = z3::Context::new(&cfg);
 
-    let mut search = BithackSearch::<BruteEnum>::new(
+    let mut search = BithackSearch::<CircuitEnum>::new(
         false,
         &ctx,
         vec!["x".to_string()],
