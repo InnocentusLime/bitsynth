@@ -4,6 +4,8 @@ use log::trace;
 
 use crate::expr::{AnswerExpr, Expr, ExprVal, Value, Variable, BITS_PER_VAL};
 
+/// A structure for quickly converting various flavours of `Expr` into
+/// z3.
 pub struct Z3ToExpr<'ctx> {
     z3: &'ctx z3::Context,
     arguments: HashMap<String, usize>,

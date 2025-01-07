@@ -3,6 +3,8 @@ use z3::ast::Ast;
 
 use crate::expr::{ExprVal, BITS_PER_VAL};
 
+/// The verification oracle. It is a thin wrapper around
+/// the Z3 smt solver.
 pub struct Oracle<'ctx> {
     z3: &'ctx z3::Context,
     solver: z3::Solver<'ctx>,
@@ -57,6 +59,12 @@ impl<'ctx> Oracle<'ctx> {
         info!("Input constraints: {:?}", self.constraints);
     }
 
+    /// Attempt to construct a counter example.
+    ///
+    /// Given candidate `f(c, x)` where `c` is the uninterpretted constant vector
+    /// and verification constraint `phi(x, y)`, the checked statement is:
+    ///
+    /// `exists x, forall c y, y = f(c, x) => ~ phi (x, y)`
     pub fn counterexample<'a>(
         &'a self,
         z3_cand: &'a z3::ast::BV<'ctx>,
@@ -85,6 +93,13 @@ impl<'ctx> Oracle<'ctx> {
         answer
     }
 
+    /// Compute a value for some fixed numbers, that meets the specification.
+    ///
+    /// The specification is not necessarily a function, so we need a way to find
+    /// the valid results.
+    /// Given a fixed input X verification constraint `phi(x, y)`, the checked statement is:
+    ///
+    /// exists y, phi(X, y)
     pub fn suitable_value<'a>(
         &self,
         z3_args: impl IntoIterator<Item = &'a z3::ast::BV<'ctx>>,
@@ -120,6 +135,12 @@ impl<'ctx> Oracle<'ctx> {
         ans
     }
 
+    /// Attempt to check a candidate.
+    ///
+    /// Given candidate `f(c, x)` where `c` is the uninterpretted constant vector
+    /// and verification constraint `phi(x, y)`, the checked statement is:
+    ///
+    /// `exists c, forall x y, y = f(c, x) => phi (x, y)`
     pub fn check_candidate<'a>(
         &'a self,
         z3_cand: &'a z3::ast::BV<'ctx>,

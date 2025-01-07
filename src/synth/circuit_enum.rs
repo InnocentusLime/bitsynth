@@ -92,6 +92,8 @@ impl ComponentTemplate {
             |_, idx| inputs[idx].val.clone(),
         );
 
+        // Z3 can bitshift values by more than 32 bits.
+        // This constraint blocks it from doing so.
         if self.is_shr_const() {
             let top = z3::ast::BV::from_i64(&z3, 32, BITS_PER_VAL);
             let bot = z3::ast::BV::from_i64(&z3, 0, BITS_PER_VAL);
@@ -168,6 +170,12 @@ impl Library {
         &self.template[self.components[comp_idx]]
     }
 
+    /// Constructs a circuit constraint for a given "run", described
+    /// by `values` (the inputs) and `expected` (expected output).
+    ///
+    /// Since we can't re-use the variables from previous runs, this
+    /// leads us to construcing new `Connection`s, which use same
+    /// location variable, but different bitvector variable.
     fn func_spec<'ctx>(
         &self,
         z3: &'ctx z3::Context,
@@ -229,6 +237,7 @@ impl Library {
         }
     }
 
+    /// A bunch of constrains to put Z3 on the right track.
     fn wf_spec<'ctx>(
         &self,
         arg_count: usize,
@@ -246,7 +255,7 @@ impl Library {
 
         let mut components = Vec::<Component<'ctx>>::new();
 
-        /* Acyc constraint */
+        /* Acyc constraint (aka, component inputs are located before its output) */
         for component in &self.components {
             let template = &self.template[*component];
             let component = Component {
@@ -267,7 +276,7 @@ impl Library {
         }
 
 
-        /* Consistency constraint */
+        /* Consistency constraint (aka each component has its own output location) */
         for (i_x, x) in components.iter().enumerate() {
             for y in components.iter().skip(i_x + 1) {
                 let x = &x.output;
@@ -275,13 +284,16 @@ impl Library {
                 solver.assert(&!x.loc._eq(&y.loc));
             }
         }
+        // EXTRA: force arguments to have different locations
+        // NOTE: perhaps THIS might be a bit too much. Perhaps the better
+        // way would be to FIX argument location?
         for (i_x, x) in args.iter().enumerate() {
             for y in args.iter().skip(i_x + 1) {
                 solver.assert(&!x.loc._eq(&y.loc));
             }
         }
 
-        /* Domain constraints */
+        /* Domain constraints (aka all locations variables must be withing their respecitve range) */
         for x in components.iter().map(|x| &x.output) {
             solver.assert(&arg_count.le(&x.loc));
             solver.assert(&x.loc.lt(&loc_count));
@@ -290,6 +302,7 @@ impl Library {
             solver.assert(&zero.le(&x.loc));
             solver.assert(&x.loc.lt(&loc_count));
         }
+        // NOTE: again. Maybe it is too much?
         for x in args.iter() {
             solver.assert(&zero.le(&x.loc));
             solver.assert(&x.loc.lt(&arg_count));
@@ -345,6 +358,13 @@ enum ComponentIdx {
     Argument(usize),
 }
 
+/// Z3-powered component based synthesis.
+///
+/// This synthesizer stores circuits, which later get transformed
+/// into an AST. (for me it looks like a circuit, but most seem
+/// to call it a loop-free program).
+///
+/// https://www.cs.cmu.edu/~clegoues/courses/15-819O-16sp/notes/notes09-io-synthesis.pdf
 pub struct CircuitEnum<'ctx> {
     arg_count: usize,
     solver: z3::Solver<'ctx>,
@@ -554,6 +574,9 @@ fn default_lib() -> Library {
         template,
         components: vec![
             2, 3, 6, 6,
+
+            // This is the old "library". Turned out
+            // to cause too much runtime for the synthesizer
             // 0, 0, 0,
             // 1, 1, 1,
             // 2, 2, 2,

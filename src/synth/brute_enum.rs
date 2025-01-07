@@ -4,6 +4,8 @@ use crate::expr::{BinopKind, Expr, ExprSkeleton, ExprVal, UnopKind, Variable};
 
 use super::Synthesizer;
 
+/// Structure for enumerating all possible
+/// argument and constant subtitutions.
 pub struct ExprIdx {
     arg_count: usize,
     limit_reached: bool,
@@ -83,6 +85,7 @@ impl FusedIterator for ExprIdx {
 
 }
 
+/// Storage for the "expression skeletons".
 pub struct SkeletonIdx {
     depth_limit: usize,
     skeleton_idx: usize,
@@ -108,13 +111,24 @@ impl SkeletonIdx {
 
         self.skeletons = new_skeletons;
 
+        // Depth cutoff
         self.skeletons.retain(|x| x.expr_depth() <= self.depth_limit);
     }
 
     // NOTE: this procedure is more than likely suboptimal
+    /// Expand all "holes" with some new subterms. For instance,
+    /// the expression `_ + _` will get mapped into the following
+    /// set of skeletons:
+    /// 1. `_ + (_ & _)`
+    /// 2. `_ + (_ ^ _)`
+    /// 3. `(_ & _) + _`
+    /// 4. `_ + (_ >> _)`
+    /// ...
+    /// And so on
     fn grow_skeleton(skele: &'_ ExprSkeleton) -> impl Iterator<Item = ExprSkeleton> + '_ {
         let hole_count = skele.count_holes();
 
+        // TODO: more than likely this is where we can filter off a large chunk of candidates.
         (0..hole_count)
             .flat_map(move |hole_idx| Self::all_hole_substs()
                 .map(move |subst| skele.subst_hole(hole_idx, &subst))
@@ -169,6 +183,7 @@ impl FusedIterator for SkeletonIdx {
 
 }
 
+/// The state of the currently explored breadth
 pub struct ExprBreadth {
     expr_iter: ExprIdx,
     skele_iter: SkeletonIdx,

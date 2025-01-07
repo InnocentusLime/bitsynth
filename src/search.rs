@@ -4,12 +4,18 @@ use log::{debug, info};
 use crate::{expr::{Expr, Value}, oracle::Oracle, synth::Synthesizer};
 use crate::conv::*;
 
+/// The report of the search routine
 #[derive(Clone, Debug)]
 pub enum SearchStep {
+    /// The synthesizer has provided a sample `cand`
+    /// that doesn't meet the specification.
     IncorrectSample {
         cand: Expr,
+        /// This flag is set to `true` if a counterexample was found
         is_universally_wrong: bool,
     },
+    /// The synthesizer has provided a sample `cand`
+    /// that met the specification.
     CorrectSample {
         cand: Expr,
         answer: Expr<Value>,
@@ -24,6 +30,11 @@ pub struct BithackSearch<'ctx, S> {
 }
 
 impl<'ctx, S: Synthesizer<'ctx>> BithackSearch<'ctx, S> {
+    /// Constructs the bithack searcher, parametrised by the
+    /// synthesizer.
+    ///
+    /// If `should_learn` is true -- the searcher will try to look for
+    /// a counterexample for invalid candidates.
     pub fn new(
         should_learn: bool,
         z3: &'ctx z3::Context,
@@ -38,6 +49,7 @@ impl<'ctx, S: Synthesizer<'ctx>> BithackSearch<'ctx, S> {
         }
     }
 
+    /// Forward an SMTLIB prompt to the verification oracle
     pub fn parse_prompt(
         &mut self,
         prompt: &str,
@@ -54,6 +66,8 @@ impl<'ctx, S: Synthesizer<'ctx>> BithackSearch<'ctx, S> {
         &mut self.oracle
     }
 
+    /// Take a search step. `None` means that the search has terminated.
+    /// For more information see [SearchStep].
     pub fn step(&mut self) -> Option<SearchStep> {
         let cand = self.synth.next_expr()?;
         let z3_cand = self.converter.expr_to_z3(&cand);

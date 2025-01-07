@@ -9,6 +9,8 @@ use crate::expr::{Expr, ExprVal};
 /// be provided with examples to "learn". This allows synthesizers
 /// to speed up the search.
 pub trait Synthesizer<'ctx> {
+    /// Construct the synthesizer, letting it do all the required initialisation
+    /// routines.
     fn build(z3: &'ctx z3::Context, var_count: usize, depth_limit: usize) -> Self;
 
     /// Reports to the synthesizer, that the produced candidate is
