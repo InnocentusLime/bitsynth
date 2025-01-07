@@ -179,7 +179,6 @@ impl<'ctx> Oracle<'ctx> {
         z3::ast::forall_const(
             &self.z3,
             &z3_consts.into_iter()
-                .chain(std::iter::once(&self.result_var))
                 .map(|x| x as &dyn z3::ast::Ast)
                 .collect::<Vec<_>>()
             ,
@@ -216,7 +215,7 @@ impl<'ctx> Oracle<'ctx> {
             self.constraints.iter().collect::<Vec<_>>().as_slice()
         );
 
-        candeq.implies(&!specif)
+        z3::ast::Bool::and(&self.z3, &[&candeq.clone(), &!specif.clone()])
     }
 
     fn cand_constraint(&self, cand: &z3::ast::BV<'ctx>) -> z3::ast::Bool<'ctx> {
